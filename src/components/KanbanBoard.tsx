@@ -187,6 +187,7 @@ export default function KanbanBoard() {
             onDelete={handleDelete}
             isToday={today === day}
             date={weekDates[day]}
+            collapsible={true}
           />
         ))}
 
@@ -198,6 +199,7 @@ export default function KanbanBoard() {
           onComplete={handleComplete}
           onDelete={handleDelete}
           isCompleted={true}
+          collapsible={true}
         />
       </div>
 

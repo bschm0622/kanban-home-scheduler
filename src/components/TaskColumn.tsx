@@ -28,7 +28,13 @@ export default function TaskColumn({
   isCompleted = false,
   collapsible = false
 }: TaskColumnProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  // Smart defaults: only expand today's column, collapse everything else
+  const getDefaultExpanded = () => {
+    if (isToday) return true;
+    return false; // Collapse backlog, other days, and done by default
+  };
+  
+  const [isExpanded, setIsExpanded] = useState(getDefaultExpanded);
   return (
     <div className={`kanban-column ${isToday ? 'today' : ''} ${isBacklog ? 'backlog' : ''} ${isCompleted ? 'completed' : ''}`}>
       <div 
