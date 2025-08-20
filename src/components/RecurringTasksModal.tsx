@@ -92,7 +92,12 @@ export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksM
             onClick={handleGenerate}
             className="w-full mb-4 p-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 touch-manipulation transition-opacity"
           >
-            🔄 Generate This Week's Tasks
+            <div className="flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
+                <path d="M280-80 120-240l160-160 56 58-62 62h406v-160h80v240H274l62 62-56 58Zm-80-440v-240h486l-62-62 56-58 160 160-160 160-56-58 62-62H280v160h-80Z"/>
+              </svg>
+              Generate This Week's Tasks
+            </div>
           </button>
 
           {/* Recurring tasks list */}

@@ -21,7 +21,7 @@ export default defineSchema({
     completedAt: v.optional(v.number()),
     createdAt: v.number(),
     recurringTaskId: v.optional(v.id("recurringTasks")),
-    userId: v.optional(v.string()), // Clerk user ID - temporarily optional for migration
+    userId: v.string(), // Clerk user ID
   })
     .index("by_status", ["status"])
     .index("by_week", ["weekId"])
@@ -46,7 +46,7 @@ export default defineSchema({
     )),
     isActive: v.boolean(),
     createdAt: v.number(),
-    userId: v.optional(v.string()), // Clerk user ID - temporarily optional for migration
+    userId: v.string(), // Clerk user ID
   }).index("by_user", ["userId"]),
 
   weeks: defineTable({
@@ -55,7 +55,7 @@ export default defineSchema({
     endDate: v.string(), // ISO date string
     isArchived: v.boolean(),
     createdAt: v.number(),
-    userId: v.optional(v.string()), // Clerk user ID - temporarily optional for migration
+    userId: v.string(), // Clerk user ID
   })
     .index("by_week_id", ["weekId"])
     .index("by_user", ["userId"])

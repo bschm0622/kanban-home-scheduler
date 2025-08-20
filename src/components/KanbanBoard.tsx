@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -23,6 +23,59 @@ export default function KanbanBoard() {
   const [showRolloverConfirm, setShowRolloverConfirm] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [globalExpanded, setGlobalExpanded] = useState<boolean | null>(null);
+  const [columnStates, setColumnStates] = useState<Record<string, boolean>>({});
+
+  // Calculate if all columns are expanded
+  const allExpanded = Object.values(columnStates).length > 0 && Object.values(columnStates).every(expanded => expanded);
+
+  // Memoized callback functions to prevent infinite re-renders
+  const handleBacklogExpandedChange = useCallback((expanded: boolean) => {
+    setColumnStates(prev => ({...prev, backlog: expanded}));
+  }, []);
+
+  const handleMondayExpandedChange = useCallback((expanded: boolean) => {
+    setColumnStates(prev => ({...prev, monday: expanded}));
+  }, []);
+
+  const handleTuesdayExpandedChange = useCallback((expanded: boolean) => {
+    setColumnStates(prev => ({...prev, tuesday: expanded}));
+  }, []);
+
+  const handleWednesdayExpandedChange = useCallback((expanded: boolean) => {
+    setColumnStates(prev => ({...prev, wednesday: expanded}));
+  }, []);
+
+  const handleThursdayExpandedChange = useCallback((expanded: boolean) => {
+    setColumnStates(prev => ({...prev, thursday: expanded}));
+  }, []);
+
+  const handleFridayExpandedChange = useCallback((expanded: boolean) => {
+    setColumnStates(prev => ({...prev, friday: expanded}));
+  }, []);
+
+  const handleSaturdayExpandedChange = useCallback((expanded: boolean) => {
+    setColumnStates(prev => ({...prev, saturday: expanded}));
+  }, []);
+
+  const handleSundayExpandedChange = useCallback((expanded: boolean) => {
+    setColumnStates(prev => ({...prev, sunday: expanded}));
+  }, []);
+
+  const handleCompletedExpandedChange = useCallback((expanded: boolean) => {
+    setColumnStates(prev => ({...prev, completed: expanded}));
+  }, []);
+
+  // Map day names to their corresponding handlers
+  const dayHandlers = {
+    monday: handleMondayExpandedChange,
+    tuesday: handleTuesdayExpandedChange,
+    wednesday: handleWednesdayExpandedChange,
+    thursday: handleThursdayExpandedChange,
+    friday: handleFridayExpandedChange,
+    saturday: handleSaturdayExpandedChange,
+    sunday: handleSundayExpandedChange,
+  };
 
   // Auto-rollover previous weeks on app load
   useEffect(() => {
@@ -158,10 +211,24 @@ export default function KanbanBoard() {
               `
             }} />
             <button
-              onClick={() => setShowNewTask(true)}
-              className="bg-primary text-white px-3 py-1.5 rounded-lg text-sm font-medium touch-manipulation hover:opacity-90 transition-opacity"
+              onClick={() => {
+                const newExpandedState = !allExpanded;
+                setGlobalExpanded(newExpandedState);
+                // Reset global trigger after columns update
+                setTimeout(() => setGlobalExpanded(null), 100);
+              }}
+              className="bg-muted/30 text-tertiary hover:bg-muted/50 px-3 py-1.5 rounded-lg text-sm font-medium touch-manipulation transition-colors"
+              title={allExpanded ? "Collapse All" : "Expand All"}
             >
-              + Add
+              {allExpanded ? (
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
+                  <path d="m356-160-56-56 180-180 180 180-56 56-124-124-124 124Zm124-404L300-744l56-56 124 124 124-124 56 56-180 180Z"/>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
+                  <path d="M480-80 240-320l57-57 183 183 183-183 57 57L480-80ZM298-584l-58-56 240-240 240 240-58 56-182-182-182 182Z"/>
+                </svg>
+              )}
             </button>
             <UserButton 
               appearance={{
@@ -188,6 +255,8 @@ export default function KanbanBoard() {
           onDelete={handleDelete}
           isBacklog={true}
           collapsible={true}
+          globalExpanded={globalExpanded}
+          onExpandedChange={handleBacklogExpandedChange}
         />
 
         {/* Week days */}
@@ -202,6 +271,8 @@ export default function KanbanBoard() {
             isToday={today === day}
             date={weekDates[day]}
             collapsible={true}
+            globalExpanded={globalExpanded}
+            onExpandedChange={dayHandlers[day as keyof typeof dayHandlers]}
           />
         ))}
 
@@ -214,6 +285,8 @@ export default function KanbanBoard() {
           onDelete={handleDelete}
           isCompleted={true}
           collapsible={true}
+          globalExpanded={globalExpanded}
+          onExpandedChange={handleCompletedExpandedChange}
         />
       </div>
 
@@ -224,22 +297,26 @@ export default function KanbanBoard() {
             onClick={() => setShowRecurring(true)}
             className="nav-button secondary"
           >
-            <span className="text-sm">🔄</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
+              <path d="M280-80 120-240l160-160 56 58-62 62h406v-160h80v240H274l62 62-56 58Zm-80-440v-240h486l-62-62 56-58 160 160-160 160-56-58 62-62H280v160h-80Z"/>
+            </svg>
             <span className="text-xs">Recurring</span>
           </button>
           <button 
             onClick={() => setShowHistory(true)}
             className="nav-button secondary"
           >
-            <span className="text-sm">📊</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
+              <path d="M480-120q-138 0-240.5-91.5T122-440h82q14 104 92.5 172T480-200q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h110v80H120v-240h80v94q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z"/>
+            </svg>
             <span className="text-xs">History</span>
           </button>
           <button 
             onClick={() => setShowRolloverConfirm(true)}
             className="nav-button secondary"
           >
-            <span className="text-sm">🧹</span>
-            <span className="text-xs">Reset Week</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-250q78 0 134-56t56-134q0-78-56-134t-134-56q-38 0-71 14t-59 38v-62h-60v170h170v-60h-72q17-18 41-29t51-11q54 0 92 38t38 92q0 54-38 92t-92 38q-44 0-77-25.5T356-400h-62q14 65 65.5 107.5T480-250ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-446L526-800H240v640Zm0 0v-640 640Z" /></svg>
+            <span className="text-xs">Reset</span>
           </button>
           <button 
             onClick={() => setShowNewTask(true)}
@@ -265,7 +342,10 @@ export default function KanbanBoard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-surface rounded-lg shadow-lg max-w-sm w-full border border-muted">
             <div className="p-4">
-              <h3 className="text-lg font-semibold text-foreground mb-2">🔄 Reset Week?</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-250q78 0 134-56t56-134q0-78-56-134t-134-56q-38 0-71 14t-59 38v-62h-60v170h170v-60h-72q17-18 41-29t51-11q54 0 92 38t38 92q0 54-38 92t-92 38q-44 0-77-25.5T356-400h-62q14 65 65.5 107.5T480-250ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-446L526-800H240v640Zm0 0v-640 640Z" /></svg>
+                Reset Week?
+              </h3>
               <p className="text-sm text-tertiary mb-4">
                 This will move all incomplete tasks back to the backlog. Completed tasks will be archived.
               </p>

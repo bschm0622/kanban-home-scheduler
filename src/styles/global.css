@@ -221,6 +221,10 @@
     @apply bg-primary text-white hover:opacity-90;
 }
 
+.action-button.done {
+    @apply bg-green-600 text-white hover:bg-green-700 font-medium shadow-sm;
+}
+
 .action-button.secondary {
     @apply bg-secondary text-tertiary hover:bg-muted;
 }

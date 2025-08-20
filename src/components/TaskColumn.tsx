@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { Task, TaskStatus } from "../types";
 import TaskCard from "./TaskCard";
@@ -14,6 +14,8 @@ interface TaskColumnProps {
   isBacklog?: boolean;
   isCompleted?: boolean;
   collapsible?: boolean;
+  globalExpanded?: boolean | null;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 export default function TaskColumn({ 
@@ -26,7 +28,9 @@ export default function TaskColumn({
   date,
   isBacklog = false,
   isCompleted = false,
-  collapsible = false
+  collapsible = false,
+  globalExpanded = null,
+  onExpandedChange
 }: TaskColumnProps) {
   // Smart defaults: only expand today's column, collapse everything else
   const getDefaultExpanded = () => {
@@ -35,6 +39,20 @@ export default function TaskColumn({
   };
   
   const [isExpanded, setIsExpanded] = useState(getDefaultExpanded);
+  
+  // Handle global expand/collapse
+  useEffect(() => {
+    if (globalExpanded !== null) {
+      setIsExpanded(globalExpanded);
+    }
+  }, [globalExpanded]);
+
+  // Report expanded state changes to parent
+  useEffect(() => {
+    if (onExpandedChange) {
+      onExpandedChange(isExpanded);
+    }
+  }, [isExpanded, onExpandedChange]);
   return (
     <div className={`kanban-column ${isToday ? 'today' : ''} ${isBacklog ? 'backlog' : ''} ${isCompleted ? 'completed' : ''}`}>
       <div 
@@ -58,7 +76,11 @@ export default function TaskColumn({
             )}
           </div>
         </div>
-        <span className="text-xs text-tertiary bg-muted/50 px-2 py-0.5 rounded-full min-w-5 text-center">
+        <span className={`text-xs px-2 py-0.5 rounded-full min-w-5 text-center transition-colors ${
+          tasks.length > 0 
+            ? 'bg-primary text-white font-medium' 
+            : 'text-tertiary bg-muted/50'
+        }`}>
           {tasks.length}
         </span>
       </div>

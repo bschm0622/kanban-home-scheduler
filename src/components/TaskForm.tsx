@@ -121,14 +121,14 @@ export default function TaskForm({ isOpen, onClose }: TaskFormProps) {
               onChange={(e) => setStatus(e.target.value as Exclude<TaskStatus, "completed">)}
               className="w-full p-3 border border-muted rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-base bg-surface text-foreground"
             >
-              <option value="backlog">📝 Backlog</option>
-              <option value="monday">📅 Monday</option>
-              <option value="tuesday">📅 Tuesday</option>
-              <option value="wednesday">📅 Wednesday</option>
-              <option value="thursday">📅 Thursday</option>
-              <option value="friday">📅 Friday</option>
-              <option value="saturday">📅 Saturday</option>
-              <option value="sunday">📅 Sunday</option>
+              <option value="backlog">Backlog</option>
+              <option value="monday">Monday</option>
+              <option value="tuesday">Tuesday</option>
+              <option value="wednesday">Wednesday</option>
+              <option value="thursday">Thursday</option>
+              <option value="friday">Friday</option>
+              <option value="saturday">Saturday</option>
+              <option value="sunday">Sunday</option>
             </select>
           </div>
 

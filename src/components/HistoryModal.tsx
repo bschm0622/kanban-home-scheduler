@@ -111,7 +111,9 @@ export default function HistoryModal({ isOpen, onClose }: HistoryModalProps) {
                       )}
                     </div>
                     <div className="ml-2">
-                      <span className="text-green-600 text-lg">✅</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor" className="text-green-600">
+                        <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -134,7 +136,12 @@ export default function HistoryModal({ isOpen, onClose }: HistoryModalProps) {
       <div className="bg-surface w-full sm:w-96 sm:max-w-lg sm:rounded-lg rounded-t-lg max-h-[90vh] overflow-hidden flex flex-col">
         <div className="kanban-header border-b border-muted flex-shrink-0">
           <div className="p-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">📊 History</h2>
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
+                <path d="M480-120q-138 0-240.5-91.5T122-440h82q14 104 92.5 172T480-200q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h110v80H120v-240h80v94q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z"/>
+              </svg>
+              History
+            </h2>
             <button
               onClick={onClose}
               className="text-tertiary hover:text-foreground text-xl"
