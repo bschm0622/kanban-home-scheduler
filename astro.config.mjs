@@ -2,7 +2,7 @@
 import { defineConfig, fontProviders, envField } from 'astro/config';
 import sitemap from "@astrojs/sitemap";
 import react from "@astrojs/react";
-import { VitePWA } from '@vite-pwa/astro';
+import AstroPWA from '@vite-pwa/astro';
 
 import tailwindcss from '@tailwindcss/vite';
 
@@ -14,7 +14,7 @@ export default defineConfig({
   integrations: [
     sitemap(), 
     react(),
-    VitePWA({
+    AstroPWA({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
