@@ -1,11 +1,11 @@
-# Proxy Clerk API base path
+# Use Netlify Function as the Clerk proxy
 [[redirects]]
   from = "/clerk/*"
-  to = "https://api.clerk.com/:splat"
+  to = "/.netlify/functions/clerk-proxy/:splat"
   status = 200
   force = true
-  headers = { X-Forwarded-Host = "home.beckyschmidt.me", X-Forwarded-Proto = "https" }
-
 
 [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "PUBLIC_CLERK_PUBLISHABLE_KEY"
+  # Ensure your Node runtime is 18+ to use native fetch
+  NODE_VERSION = "18"

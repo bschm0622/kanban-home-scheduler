@@ -37,7 +37,7 @@ const ConvexApp: FC = () => {
   return (
     <ClerkProvider 
       publishableKey={import.meta.env.PUBLIC_CLERK_PUBLISHABLE_KEY}
-      proxyUrl="/clerk"
+      proxyUrl="/.netlify/functions/clerk-proxy"
       appearance={{
         baseTheme: undefined,
         variables: {
