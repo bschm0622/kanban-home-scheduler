@@ -125,7 +125,7 @@ export default function KanbanBoard() {
       <div className="app-header">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-foreground">Home</h1>
+            <h1 className="text-lg font-semibold text-foreground">Schmidt Home Tasks</h1>
             <p className="text-xs text-tertiary">
               {todayDate}
             </p>
@@ -173,6 +173,7 @@ export default function KanbanBoard() {
           onComplete={handleComplete}
           onDelete={handleDelete}
           isBacklog={true}
+          collapsible={true}
         />
 
         {/* Week days */}
@@ -196,6 +197,7 @@ export default function KanbanBoard() {
           onStatusChange={handleStatusChange}
           onComplete={handleComplete}
           onDelete={handleDelete}
+          isCompleted={true}
         />
       </div>
 

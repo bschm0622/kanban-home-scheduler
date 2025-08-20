@@ -165,6 +165,14 @@
     @apply bg-muted/30;
 }
 
+.kanban-column.completed {
+    @apply bg-green-50 border-green-200/50 dark:bg-green-900/20 dark:border-green-700/50;
+}
+
+.kanban-column.completed .kanban-column-header {
+    @apply bg-green-100/50 dark:bg-green-800/20;
+}
+
 .kanban-column-header {
     @apply px-4 py-3 flex items-center justify-between;
 }
