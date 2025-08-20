@@ -5,11 +5,11 @@ import react from "@astrojs/react";
 
 import tailwindcss from '@tailwindcss/vite';
 
-import netlify from "@astrojs/netlify";
 
 // https://astro.build/config
 export default defineConfig({
   site: "https://home.beckyschmidt.me",
+  output: "static",
   integrations: [sitemap(), react()],
 
   env: {
@@ -33,5 +33,4 @@ export default defineConfig({
     }]
   },
 
-  adapter: netlify()
 });
