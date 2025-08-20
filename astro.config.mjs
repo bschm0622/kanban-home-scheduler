@@ -5,10 +5,13 @@ import react from "@astrojs/react";
 
 import tailwindcss from '@tailwindcss/vite';
 
+import netlify from "@astrojs/netlify";
+
 // https://astro.build/config
 export default defineConfig({
-  site: "http://localhost:4321",
+  site: "https://home.beckyschmidt.me",
   integrations: [sitemap(), react()],
+
   env: {
     schema: {
       CONVEX_URL: envField.string({
@@ -17,14 +20,18 @@ export default defineConfig({
       }),
     },
   },
+
   vite: {
     plugins: [tailwindcss()]
   },
+
   experimental: {
   fonts: [{
     provider: fontProviders.fontsource(),
       name: "Roboto",
       cssVariable: "--font-roboto"
     }]
-  }
+  },
+
+  adapter: netlify()
 });
