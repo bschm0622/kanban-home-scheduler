@@ -1,13 +1,22 @@
 // @ts-check
-import { defineConfig, fontProviders } from 'astro/config';
+import { defineConfig, fontProviders, envField } from 'astro/config';
 import sitemap from "@astrojs/sitemap";
+import react from "@astrojs/react";
 
 import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
 export default defineConfig({
   site: "http://localhost:4321",
-  integrations: [sitemap()],
+  integrations: [sitemap(), react()],
+  env: {
+    schema: {
+      CONVEX_URL: envField.string({
+        access: "public",
+        context: "client",
+      }),
+    },
+  },
   vite: {
     plugins: [tailwindcss()]
   },

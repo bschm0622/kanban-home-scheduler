@@ -5,39 +5,39 @@
 @theme {
     --color-primary: #2563eb;
     /* Medium blue, calm and neutral */
-    --color-muted: #e5e5e5;
-    /* Light gray for subtle UI elements */
+    --color-muted: #d1d5db;
+    /* Better contrast muted gray */
     --color-tertiary: #6b7280;
-    /* Neutral gray, nice balance */
+    /* Neutral gray for secondary text */
     --color-surface: #ffffff;
     /* Pure white for surfaces */
-    --color-accent: #9ca3af;
-    /* Soft gray-blue accent */
-    --color-secondary: #f3f4f6;
-    /* Very light gray for backgrounds or highlights */
-    --color-foreground: #1e293b;
-    /* Dark slate blue-gray, good readable text */
-    --color-background: #f9fafb;
-    /* Very light gray background */
+    --color-accent: #8b5cf6;
+    /* Purple accent for variety */
+    --color-secondary: #f9fafb;
+    /* Very light gray for backgrounds */
+    --color-foreground: #111827;
+    /* Darker text for better contrast */
+    --color-background: #ffffff;
+    /* Clean white background */
 }
 
 .dark {
     --color-primary: #3b82f6;
     /* Brighter blue for dark mode */
-    --color-muted: #475569;
-    /* Muted dark slate */
-    --color-tertiary: #94a3b8;
-    /* Light gray-blue accent */
-    --color-surface: #1e293b;
-    /* Dark slate surface */
-    --color-accent: #cbd5e1;
-    /* Light gray accent */
-    --color-secondary: #334155;
-    /* Darker slate background */
-    --color-foreground: #f1f5f9;
-    /* Off-white text */
-    --color-background: #0f172a;
-    /* Very dark slate background */
+    --color-muted: #4b5563;
+    /* Better contrast muted for dark */
+    --color-tertiary: #9ca3af;
+    /* Light gray for secondary text */
+    --color-surface: #1f2937;
+    /* Dark surface with good contrast */
+    --color-accent: #a78bfa;
+    /* Lighter purple for dark mode */
+    --color-secondary: #374151;
+    /* Darker background */
+    --color-foreground: #f9fafb;
+    /* High contrast text */
+    --color-background: #111827;
+    /* Very dark background */
 }
 
 .typography {
@@ -134,4 +134,128 @@
     *:last-child {
         @apply mb-0;
     }
+}
+
+/* Clean minimal mobile design */
+.app {
+    @apply min-h-screen bg-background text-foreground;
+}
+
+.app-header {
+    @apply bg-surface/80 backdrop-blur-sm border-b border-muted/50 px-4 py-2;
+}
+
+.kanban-columns {
+    @apply space-y-3 p-3 pb-32;
+}
+
+.kanban-column {
+    @apply bg-surface rounded-xl border border-muted/30;
+}
+
+.kanban-column.today {
+    @apply border-primary/30 bg-primary/5;
+}
+
+.kanban-column.backlog {
+    @apply bg-muted/20 border-muted/50;
+}
+
+.kanban-column.backlog .kanban-column-header {
+    @apply bg-muted/30;
+}
+
+.kanban-column-header {
+    @apply px-4 py-3 flex items-center justify-between;
+}
+
+.task-card {
+    @apply bg-surface border border-muted/20 rounded-lg mx-3 mb-2 touch-manipulation transition-all duration-200;
+}
+
+.task-card:hover {
+    @apply border-muted/40;
+}
+
+.task-card.priority-low {
+    @apply border-l-4 border-l-green-500;
+}
+
+.task-card.priority-medium {
+    @apply border-l-4 border-l-yellow-500;
+}
+
+.task-card.priority-high {
+    @apply border-l-4 border-l-red-500;
+}
+
+.task-content {
+    @apply p-3;
+}
+
+.task-actions {
+    @apply p-3 pt-0 space-y-2;
+}
+
+.task-action-row {
+    @apply flex gap-1.5;
+}
+
+.task-action-grid {
+    @apply grid grid-cols-7 gap-1;
+}
+
+.action-button {
+    @apply px-2 py-1.5 rounded-md text-xs font-medium touch-manipulation transition-colors;
+}
+
+.action-button.primary {
+    @apply bg-primary text-white hover:opacity-90;
+}
+
+.action-button.secondary {
+    @apply bg-secondary text-tertiary hover:bg-muted;
+}
+
+.action-button.day {
+    @apply bg-muted/50 text-tertiary hover:bg-muted text-center;
+}
+
+.action-button.day.active {
+    @apply bg-primary text-white;
+}
+
+.bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-sm border-t border-muted/50 p-3;
+}
+
+.bottom-nav-grid {
+    @apply grid grid-cols-4 gap-2 max-w-md mx-auto;
+}
+
+.nav-button {
+    @apply p-3 rounded-xl text-center touch-manipulation transition-colors flex flex-col items-center gap-1;
+}
+
+.nav-button.primary {
+    @apply bg-primary text-white;
+}
+
+.nav-button.secondary {
+    @apply bg-muted/30 text-tertiary hover:bg-muted/50;
+}
+
+/* Form input improvements */
+input[type="text"], 
+input[type="email"], 
+textarea, 
+select {
+    @apply text-foreground placeholder:text-tertiary;
+}
+
+input[type="text"]:focus, 
+input[type="email"]:focus, 
+textarea:focus, 
+select:focus {
+    @apply text-foreground;
 }

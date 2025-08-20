@@ -38,26 +38,16 @@ export interface SiteConfiguration {
 }
 
 export const SITE: SiteConfiguration = {
-    title: "",
-    name: "Becky Schmidt",
-    description: "Built with Astro, Tailwind CSS, and Markdown.",
-    href: "https://astro-boilerplate.beckyschmidt.me",
+    title: "Home Organizer",
+    name: "Home Organizer",
+    description: "Mobile kanban board for home organization and task management.",
+    href: "http://localhost:4321",
     author: "Becky Schmidt",
     locale: "en-US",
 
-    socials: {
-        github: "https://github.com/bschm0622",
-        linkedin: "https://www.linkedin.com/in/becky--schmidt/",
-        email: "beckyschmidt0622@gmail.com",
-    },
-
     nav: [
-        { label: "Home", href: "/" },
-        { label: "About", href: "/about" },
-        { label: "Blog", href: "/blog" },
-        { label: "Podroll", href: "/podroll" },
-        { label: "EDC", href: "/edc" },
+        { label: "Board", href: "/" },
     ],
 
-    copyright: `© ${new Date().getFullYear()} Becky Schmidt. All rights reserved.`,
+    copyright: `© 2024 Home Organizer. All rights reserved.`,
 };
