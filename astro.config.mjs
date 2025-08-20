@@ -16,25 +16,6 @@ export default defineConfig({
     react(),
     AstroPWA({
       registerType: 'autoUpdate',
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/.*\.convex\.cloud\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'convex-api-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
-              }
-            }
-          }
-        ]
-      },
-      devOptions: {
-        enabled: true
-      },
       manifest: {
         name: 'Schmidt Home Tasks',
         short_name: 'Home Tasks',
@@ -48,8 +29,7 @@ export default defineConfig({
           {
             src: '/favicon.svg',
             sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
+            type: 'image/svg+xml'
           }
         ]
       }
