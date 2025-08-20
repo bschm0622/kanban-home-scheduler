@@ -14,17 +14,22 @@ function getCurrentWeekId(): string {
 // Get all tasks for the current week
 export const getCurrentWeekTasks = query({
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
     const currentWeekId = getCurrentWeekId();
     
-    // Get all tasks for current week + backlog
+    // Get all tasks for current week + backlog for this user
     const weekTasks = await ctx.db
       .query("tasks")
-      .withIndex("by_week_and_status", (q) => q.eq("weekId", currentWeekId))
+      .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", currentWeekId))
       .collect();
     
     const backlogTasks = await ctx.db
       .query("tasks")
-      .withIndex("by_status", (q) => q.eq("status", "backlog"))
+      .withIndex("by_user_and_status", (q) => q.eq("userId", identity.subject).eq("status", "backlog"))
       .collect();
     
     return {
@@ -53,6 +58,11 @@ export const createTask = mutation({
     )),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
     const currentWeekId = getCurrentWeekId();
     const status = args.status || "backlog";
     
@@ -63,6 +73,7 @@ export const createTask = mutation({
       status,
       weekId: status !== "backlog" ? currentWeekId : undefined,
       createdAt: Date.now(),
+      userId: identity.subject,
     });
   },
 });
@@ -84,6 +95,17 @@ export const updateTaskStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    // Verify user owns this task
+    const task = await ctx.db.get(args.taskId);
+    if (!task || task.userId !== identity.subject) {
+      throw new Error("Task not found or access denied");
+    }
+    
     const currentWeekId = getCurrentWeekId();
     
     const updateData: any = {
@@ -110,6 +132,17 @@ export const completeTask = mutation({
     taskId: v.id("tasks"),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    // Verify user owns this task
+    const task = await ctx.db.get(args.taskId);
+    if (!task || task.userId !== identity.subject) {
+      throw new Error("Task not found or access denied");
+    }
+    
     const currentWeekId = getCurrentWeekId();
     
     return await ctx.db.patch(args.taskId, {
@@ -126,6 +159,17 @@ export const deleteTask = mutation({
     taskId: v.id("tasks"),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    // Verify user owns this task
+    const task = await ctx.db.get(args.taskId);
+    if (!task || task.userId !== identity.subject) {
+      throw new Error("Task not found or access denied");
+    }
+    
     return await ctx.db.delete(args.taskId);
   },
 });
@@ -133,12 +177,17 @@ export const deleteTask = mutation({
 // Move incomplete tasks back to backlog (called at week end)
 export const rolloverWeek = mutation({
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
     const currentWeekId = getCurrentWeekId();
     
-    // Find all incomplete tasks from current week
+    // Find all incomplete tasks from current week for this user
     const incompleteTasks = await ctx.db
       .query("tasks")
-      .withIndex("by_week", (q) => q.eq("weekId", currentWeekId))
+      .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", currentWeekId))
       .filter((q) => q.neq(q.field("status"), "completed"))
       .collect();
     
@@ -157,6 +206,7 @@ export const rolloverWeek = mutation({
       endDate: new Date(new Date(currentWeekId).getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       isArchived: true,
       createdAt: Date.now(),
+      userId: identity.subject,
     });
     
     return { movedTasks: incompleteTasks.length };

@@ -4,8 +4,14 @@ import { v } from "convex/values";
 // Get all archived weeks with their completed tasks
 export const getArchivedWeeks = query({
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
     const archivedWeeks = await ctx.db
       .query("weeks")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .filter((q) => q.eq(q.field("isArchived"), true))
       .order("desc")
       .take(20); // Limit to last 20 weeks
@@ -14,7 +20,7 @@ export const getArchivedWeeks = query({
       archivedWeeks.map(async (week) => {
         const completedTasks = await ctx.db
           .query("tasks")
-          .withIndex("by_week", (q) => q.eq("weekId", week.weekId))
+          .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", week.weekId))
           .filter((q) => q.eq(q.field("status"), "completed"))
           .collect();
 
@@ -34,16 +40,21 @@ export const getArchivedWeeks = query({
 export const getWeekHistory = query({
   args: { weekId: v.string() },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
     const week = await ctx.db
       .query("weeks")
-      .withIndex("by_week_id", (q) => q.eq("weekId", args.weekId))
+      .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", args.weekId))
       .first();
 
     if (!week) return null;
 
     const completedTasks = await ctx.db
       .query("tasks")
-      .withIndex("by_week", (q) => q.eq("weekId", args.weekId))
+      .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", args.weekId))
       .filter((q) => q.eq(q.field("status"), "completed"))
       .collect();
 
@@ -57,8 +68,14 @@ export const getWeekHistory = query({
 // Get completion stats for the last few weeks
 export const getCompletionStats = query({
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
     const recentWeeks = await ctx.db
       .query("weeks")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .filter((q) => q.eq(q.field("isArchived"), true))
       .order("desc")
       .take(8);
@@ -66,14 +83,14 @@ export const getCompletionStats = query({
     const statsPromises = recentWeeks.map(async (week) => {
       const completedTasks = await ctx.db
         .query("tasks")
-        .withIndex("by_week", (q) => q.eq("weekId", week.weekId))
+        .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", week.weekId))
         .filter((q) => q.eq(q.field("status"), "completed"))
         .collect();
 
       // Get all tasks that were assigned to this week (completed + moved to backlog)
       const allWeekTasks = await ctx.db
         .query("tasks")
-        .withIndex("by_week", (q) => q.eq("weekId", week.weekId))
+        .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", week.weekId))
         .collect();
 
       return {

@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { Task, TaskStatus } from "../types";
+import { useUser, UserButton } from "@clerk/clerk-react";
 import TaskForm from "./TaskForm";
 import RecurringTasksModal from "./RecurringTasksModal";
 import HistoryModal from "./HistoryModal";
@@ -11,6 +12,7 @@ import TaskColumn from "./TaskColumn";
 const dayNames = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
 
 export default function KanbanBoard() {
+  const { user } = useUser();
   const data = useQuery(api.tasks.getCurrentWeekTasks);
   const updateTaskStatus = useMutation(api.tasks.updateTaskStatus);
   const completeTask = useMutation(api.tasks.completeTask);
@@ -125,12 +127,14 @@ export default function KanbanBoard() {
       <div className="app-header">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-foreground">Schmidt Home Tasks</h1>
+            <h1 className="text-lg font-semibold text-foreground">
+              {user?.firstName ? `${user.firstName}'s Tasks` : 'Home Tasks'}
+            </h1>
             <p className="text-xs text-tertiary">
               {todayDate}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div dangerouslySetInnerHTML={{
               __html: `
                 <button
@@ -159,6 +163,16 @@ export default function KanbanBoard() {
             >
               + Add
             </button>
+            <UserButton 
+              appearance={{
+                elements: {
+                  avatarBox: "w-8 h-8",
+                  userButtonPopoverCard: "bg-surface border border-muted",
+                  userButtonPopoverActionButton: "text-foreground hover:bg-secondary",
+                }
+              }}
+              afterSignOutUrl="/signin"
+            />
           </div>
         </div>
       </div>

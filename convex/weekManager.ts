@@ -13,11 +13,17 @@ function getCurrentWeekId(): string {
 // Auto-rollover any incomplete tasks from previous weeks
 export const autoRolloverPreviousWeeks = mutation({
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
     const currentWeekId = getCurrentWeekId();
     
-    // Find all tasks that have a weekId but it's not the current week and not completed
+    // Find all tasks for this user that have a weekId but it's not the current week and not completed
     const orphanedTasks = await ctx.db
       .query("tasks")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .filter((q) => 
         q.and(
           q.neq(q.field("weekId"), undefined),
@@ -40,6 +46,7 @@ export const autoRolloverPreviousWeeks = mutation({
     // Also check if we need to create a week record for any orphaned completed tasks
     const orphanedCompletedTasks = await ctx.db
       .query("tasks")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .filter((q) => 
         q.and(
           q.neq(q.field("weekId"), undefined),
@@ -55,10 +62,10 @@ export const autoRolloverPreviousWeeks = mutation({
     for (const weekId of weekIds) {
       if (!weekId) continue;
       
-      // Check if week record already exists
+      // Check if week record already exists for this user
       const existingWeek = await ctx.db
         .query("weeks")
-        .withIndex("by_week_id", (q) => q.eq("weekId", weekId))
+        .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", weekId))
         .first();
       
       if (!existingWeek) {
@@ -72,6 +79,7 @@ export const autoRolloverPreviousWeeks = mutation({
           endDate,
           isArchived: true,
           createdAt: Date.now(),
+          userId: identity.subject,
         });
       }
     }

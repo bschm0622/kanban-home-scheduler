@@ -12,6 +12,7 @@
     "@astrojs/netlify": "^6.5.7",
     "@astrojs/react": "^4.3.0",
     "@astrojs/sitemap": "^3.4.1",
+    "@clerk/clerk-react": "^5.43.0",
     "@tailwindcss/vite": "^4.1.10",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",

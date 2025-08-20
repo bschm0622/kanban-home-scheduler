@@ -1,0 +1,6 @@
+[[redirects]]
+  from = "/clerk/*"
+  to = "https://api.clerk.com/:splat"
+  status = 200
+  force = true
+  headers = { X-Forwarded-Host = "home.beckyschmidt.me" }

@@ -21,10 +21,14 @@ export default defineSchema({
     completedAt: v.optional(v.number()),
     createdAt: v.number(),
     recurringTaskId: v.optional(v.id("recurringTasks")),
+    userId: v.optional(v.string()), // Clerk user ID - temporarily optional for migration
   })
     .index("by_status", ["status"])
     .index("by_week", ["weekId"])
-    .index("by_week_and_status", ["weekId", "status"]),
+    .index("by_week_and_status", ["weekId", "status"])
+    .index("by_user", ["userId"])
+    .index("by_user_and_week", ["userId", "weekId"])
+    .index("by_user_and_status", ["userId", "status"]),
 
   recurringTasks: defineTable({
     title: v.string(),
@@ -42,7 +46,8 @@ export default defineSchema({
     )),
     isActive: v.boolean(),
     createdAt: v.number(),
-  }),
+    userId: v.optional(v.string()), // Clerk user ID - temporarily optional for migration
+  }).index("by_user", ["userId"]),
 
   weeks: defineTable({
     weekId: v.string(), // Format: YYYY-MM-DD (Monday of the week)
@@ -50,5 +55,9 @@ export default defineSchema({
     endDate: v.string(), // ISO date string
     isArchived: v.boolean(),
     createdAt: v.number(),
-  }).index("by_week_id", ["weekId"]),
+    userId: v.optional(v.string()), // Clerk user ID - temporarily optional for migration
+  })
+    .index("by_week_id", ["weekId"])
+    .index("by_user", ["userId"])
+    .index("by_user_and_week", ["userId", "weekId"]),
 });

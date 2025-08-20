@@ -4,8 +4,14 @@ import { v } from "convex/values";
 // Get all active recurring tasks
 export const getRecurringTasks = query({
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
     return await ctx.db
       .query("recurringTasks")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .filter((q) => q.eq(q.field("isActive"), true))
       .collect();
   },
@@ -29,6 +35,11 @@ export const createRecurringTask = mutation({
     )),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
     return await ctx.db.insert("recurringTasks", {
       title: args.title,
       description: args.description,
@@ -37,6 +48,7 @@ export const createRecurringTask = mutation({
       preferredDay: args.preferredDay,
       isActive: true,
       createdAt: Date.now(),
+      userId: identity.subject,
     });
   },
 });
@@ -44,6 +56,11 @@ export const createRecurringTask = mutation({
 // Generate tasks from recurring tasks for the current week
 export const generateRecurringTasks = mutation({
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
     // Get current week ID
     const now = new Date();
     const monday = new Date(now);
@@ -54,6 +71,7 @@ export const generateRecurringTasks = mutation({
     
     const recurringTasks = await ctx.db
       .query("recurringTasks")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .filter((q) => q.eq(q.field("isActive"), true))
       .collect();
     
@@ -63,7 +81,7 @@ export const generateRecurringTasks = mutation({
       // Check if we already generated this recurring task for this week
       const existingTask = await ctx.db
         .query("tasks")
-        .withIndex("by_week", (q) => q.eq("weekId", currentWeekId))
+        .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", currentWeekId))
         .filter((q) => q.eq(q.field("recurringTaskId"), recurringTask._id))
         .first();
       
@@ -77,6 +95,7 @@ export const generateRecurringTasks = mutation({
           weekId: recurringTask.preferredDay ? currentWeekId : undefined,
           recurringTaskId: recurringTask._id,
           createdAt: Date.now(),
+          userId: identity.subject,
         });
         
         generatedTasks.push(taskId);
@@ -93,8 +112,15 @@ export const toggleRecurringTask = mutation({
     taskId: v.id("recurringTasks"),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
     const task = await ctx.db.get(args.taskId);
-    if (!task) throw new Error("Task not found");
+    if (!task || task.userId !== identity.subject) {
+      throw new Error("Task not found or access denied");
+    }
     
     return await ctx.db.patch(args.taskId, {
       isActive: !task.isActive,
@@ -108,6 +134,16 @@ export const deleteRecurringTask = mutation({
     taskId: v.id("recurringTasks"),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    const task = await ctx.db.get(args.taskId);
+    if (!task || task.userId !== identity.subject) {
+      throw new Error("Task not found or access denied");
+    }
+    
     return await ctx.db.delete(args.taskId);
   },
 });
