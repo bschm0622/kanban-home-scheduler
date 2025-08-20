@@ -1,9 +1,17 @@
+# Proxy Clerk API (Frontend API)
 [[redirects]]
-  from = "/clerk/*"
-  to = "https://api.clerk.com/:splat"
+  from = "/clerk/v1/*"
+  to = "https://api.clerk.com/v1/:splat"
   status = 200
   force = true
-  headers = { X-Forwarded-Host = "home.beckyschmidt.me" }
+
+# Proxy Clerk assets (JS bundle, etc.)
+[[redirects]]
+  from = "/clerk/npm/*"
+  to = "https://cdn.clerk.com/npm/:splat"
+  status = 200
+  force = true
 
 [build.environment]
+  # Tell Netlify to ignore Clerk's publishable key in the build output
   SECRETS_SCAN_OMIT_KEYS = "PUBLIC_CLERK_PUBLISHABLE_KEY"
