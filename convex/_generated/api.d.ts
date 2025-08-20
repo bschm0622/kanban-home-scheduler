@@ -14,7 +14,6 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as history from "../history.js";
-import type * as migrations from "../migrations.js";
 import type * as recurringTasks from "../recurringTasks.js";
 import type * as tasks from "../tasks.js";
 import type * as weekManager from "../weekManager.js";
@@ -29,7 +28,6 @@ import type * as weekManager from "../weekManager.js";
  */
 declare const fullApi: ApiFromModules<{
   history: typeof history;
-  migrations: typeof migrations;
   recurringTasks: typeof recurringTasks;
   tasks: typeof tasks;
   weekManager: typeof weekManager;
