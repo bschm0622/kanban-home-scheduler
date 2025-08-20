@@ -246,7 +246,7 @@
 }
 
 .nav-button {
-    @apply p-3 rounded-xl text-center touch-manipulation transition-colors flex flex-col items-center gap-1;
+    @apply p-2 rounded-xl text-center touch-manipulation transition-colors flex flex-col items-center gap-1;
 }
 
 .nav-button.primary {

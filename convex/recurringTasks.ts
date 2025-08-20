@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
-// Get all active recurring tasks
+// Get all recurring tasks
 export const getRecurringTasks = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -12,7 +12,6 @@ export const getRecurringTasks = query({
     return await ctx.db
       .query("recurringTasks")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
-      .filter((q) => q.eq(q.field("isActive"), true))
       .collect();
   },
 });
@@ -53,9 +52,12 @@ export const createRecurringTask = mutation({
   },
 });
 
-// Generate tasks from recurring tasks for the current week
+// Generate tasks from selected recurring tasks for the current week
 export const generateRecurringTasks = mutation({
-  handler: async (ctx) => {
+  args: {
+    taskIds: v.array(v.id("recurringTasks")),
+  },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Not authenticated");
@@ -69,15 +71,17 @@ export const generateRecurringTasks = mutation({
     monday.setDate(diff);
     const currentWeekId = monday.toISOString().split('T')[0];
     
-    const recurringTasks = await ctx.db
-      .query("recurringTasks")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
-      .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
-    
     const generatedTasks = [];
     
-    for (const recurringTask of recurringTasks) {
+    // Process only the selected recurring tasks
+    for (const taskId of args.taskIds) {
+      const recurringTask = await ctx.db.get(taskId);
+      
+      // Verify ownership and existence
+      if (!recurringTask || recurringTask.userId !== identity.subject) {
+        continue; // Skip if not found or not owned
+      }
+      
       // Check if we already generated this recurring task for this week
       const existingTask = await ctx.db
         .query("tasks")
@@ -87,7 +91,7 @@ export const generateRecurringTasks = mutation({
       
       if (!existingTask) {
         // Generate the task
-        const taskId = await ctx.db.insert("tasks", {
+        const newTaskId = await ctx.db.insert("tasks", {
           title: recurringTask.title,
           description: recurringTask.description,
           priority: recurringTask.priority,
@@ -98,11 +102,56 @@ export const generateRecurringTasks = mutation({
           userId: identity.subject,
         });
         
-        generatedTasks.push(taskId);
+        generatedTasks.push(newTaskId);
       }
     }
     
     return { generatedCount: generatedTasks.length };
+  },
+});
+
+// Check which recurring tasks already have generated tasks for this week
+export const checkExistingTasks = mutation({
+  args: {
+    taskIds: v.array(v.id("recurringTasks")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    // Get current week ID
+    const now = new Date();
+    const monday = new Date(now);
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    monday.setDate(diff);
+    const currentWeekId = monday.toISOString().split('T')[0];
+    
+    const availableTasks = [];
+    
+    for (const taskId of args.taskIds) {
+      const recurringTask = await ctx.db.get(taskId);
+      
+      // Verify ownership and existence
+      if (!recurringTask || recurringTask.userId !== identity.subject) {
+        continue;
+      }
+      
+      // Check if we already generated this recurring task for this week
+      const existingTask = await ctx.db
+        .query("tasks")
+        .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", currentWeekId))
+        .filter((q) => q.eq(q.field("recurringTaskId"), recurringTask._id))
+        .first();
+      
+      if (!existingTask) {
+        availableTasks.push(taskId);
+      }
+    }
+    
+    return { availableTaskIds: availableTasks };
   },
 });
 
