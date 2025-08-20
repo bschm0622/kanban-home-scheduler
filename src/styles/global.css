@@ -147,10 +147,14 @@
 
 .kanban-columns {
     @apply space-y-3 p-3 pb-32;
+    /* Desktop: horizontal layout */
+    @apply lg:flex lg:space-y-0 lg:space-x-4 lg:overflow-x-auto lg:pb-8 lg:px-6 lg:pt-6;
 }
 
 .kanban-column {
     @apply bg-surface rounded-xl border border-muted/30;
+    /* Desktop: fixed width columns */
+    @apply lg:min-w-80 lg:flex-shrink-0;
 }
 
 .kanban-column.today {
@@ -235,14 +239,20 @@
 
 .bottom-nav {
     @apply fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-sm border-t border-muted/50 p-3;
+    /* Desktop: smaller, less prominent */
+    @apply lg:relative lg:bg-transparent lg:border-t-0 lg:p-4 lg:backdrop-blur-none;
 }
 
 .bottom-nav-grid {
     @apply grid grid-cols-4 gap-2 max-w-md mx-auto;
+    /* Desktop: more compact */
+    @apply lg:flex lg:gap-3 lg:max-w-none lg:justify-center;
 }
 
 .nav-button {
     @apply p-3 rounded-xl text-center touch-manipulation transition-colors flex flex-col items-center gap-1;
+    /* Desktop: more compact buttons */
+    @apply lg:px-4 lg:py-2 lg:rounded-lg lg:text-sm;
 }
 
 .nav-button.primary {
