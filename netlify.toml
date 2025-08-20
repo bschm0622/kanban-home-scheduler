@@ -4,3 +4,6 @@
   status = 200
   force = true
   headers = { X-Forwarded-Host = "home.beckyschmidt.me" }
+
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "PUBLIC_CLERK_PUBLISHABLE_KEY"
