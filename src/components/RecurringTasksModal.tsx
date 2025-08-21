@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import type { RecurringTask } from "../types";
+import RecurringTaskEditModal from "./RecurringTaskEditModal";
 
 
 interface RecurringTasksModalProps {
@@ -16,6 +18,8 @@ export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksM
   const generateRecurringTasks = useMutation(api.recurringTasks.generateRecurringTasks);
   
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<RecurringTask | null>(null);
   const [selectedTasks, setSelectedTasks] = useState<Set<Id<"recurringTasks">>>(new Set());
   const [generateResult, setGenerateResult] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -189,16 +193,33 @@ export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksM
                       )}
                     </div>
                     
-                    <button
-                      onClick={() => {
-                        if (confirm(`Delete "${task.title}"? This cannot be undone.`)) {
-                          deleteRecurringTask({ taskId: task._id });
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-md text-xs font-medium touch-manipulation transition-colors bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex gap-2 ml-2">
+                      <button
+                        onClick={() => {
+                          setEditingTask(task);
+                          setShowEditModal(true);
+                        }}
+                        className="px-3 py-2 rounded-md text-xs font-medium touch-manipulation transition-colors bg-muted/50 text-tertiary hover:bg-muted min-h-[40px] flex items-center justify-center"
+                        title="Edit task"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor">
+                          <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Delete "${task.title}"? This cannot be undone.`)) {
+                            deleteRecurringTask({ taskId: task._id });
+                          }
+                        }}
+                        className="px-3 py-2 rounded-md text-xs font-medium touch-manipulation transition-colors bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 min-h-[40px] flex items-center justify-center"
+                        title="Delete task"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor">
+                          <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -214,10 +235,10 @@ export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksM
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-muted flex-shrink-0">
+        <div className="p-4 border-t border-muted flex-shrink-0" style={{paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0px))`}}>
           <button
             onClick={() => setShowAddModal(true)}
-            className="w-full px-4 py-3 bg-muted/30 text-foreground rounded-lg font-medium hover:bg-muted/50 touch-manipulation transition-colors border border-muted/50"
+            className="w-full px-4 py-4 bg-muted/30 text-foreground rounded-lg font-medium hover:bg-muted/50 touch-manipulation transition-colors border border-muted/50 min-h-[48px]"
           >
             + Add Recurring Task
           </button>
@@ -320,19 +341,19 @@ export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksM
                 </div>
               </div>
 
-              <div className="p-4 border-t border-muted flex-shrink-0">
+              <div className="p-4 border-t border-muted flex-shrink-0" style={{paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0px))`}}>
                 <div className="flex space-x-3">
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 px-4 py-3 bg-muted/30 text-tertiary rounded-lg font-medium hover:bg-muted/50 touch-manipulation transition-colors"
+                    className="flex-1 px-4 py-4 bg-muted/30 text-tertiary rounded-lg font-medium hover:bg-muted/50 touch-manipulation transition-colors min-h-[48px]"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={!formData.title.trim()}
-                    className="flex-1 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation transition-opacity"
+                    className="flex-1 px-4 py-4 bg-primary text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation transition-opacity min-h-[48px]"
                   >
                     Create Task
                   </button>
@@ -342,6 +363,16 @@ export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksM
           </div>
         </div>
       )}
+      
+      {/* Edit Recurring Task Modal */}
+      <RecurringTaskEditModal 
+        isOpen={showEditModal} 
+        recurringTask={editingTask}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingTask(null);
+        }} 
+      />
     </div>
   );
 }

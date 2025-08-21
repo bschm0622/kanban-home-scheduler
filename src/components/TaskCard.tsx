@@ -7,9 +7,10 @@ interface TaskCardProps {
   onStatusChange: (taskId: Id<"tasks">, newStatus: TaskStatus) => void;
   onComplete: (taskId: Id<"tasks">) => void;
   onDelete: (taskId: Id<"tasks">) => void;
+  onEdit: (taskId: Id<"tasks">) => void;
 }
 
-export default function TaskCard({ task, onStatusChange, onComplete, onDelete }: TaskCardProps) {
+export default function TaskCard({ task, onStatusChange, onComplete, onDelete, onEdit }: TaskCardProps) {
   const [showActions, setShowActions] = useState(false);
 
   return (
@@ -69,7 +70,7 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete }:
               </button>
             ))}
           </div>
-          <div className="task-action-grid mt-2" style={{gridTemplateColumns: 'repeat(2, 1fr)'}}>
+          <div className="task-action-grid mt-2" style={{gridTemplateColumns: 'repeat(3, 1fr)'}}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -81,6 +82,18 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete }:
                 <path d="M320-280q17 0 28.5-11.5T360-320q0-17-11.5-28.5T320-360q-17 0-28.5 11.5T280-320q0 17 11.5 28.5T320-280Zm0-160q17 0 28.5-11.5T360-480q0-17-11.5-28.5T320-520q-17 0-28.5 11.5T280-480q0 17 11.5 28.5T320-440Zm0-160q17 0 28.5-11.5T360-640q0-17-11.5-28.5T320-680q-17 0-28.5 11.5T280-640q0 17 11.5 28.5T320-600Zm120 320h240v-80H440v80Zm0-160h240v-80H440v80Zm0-160h240v-80H440v80ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z"/>
               </svg>
               Backlog
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(task._id);
+              }}
+              className="action-button day flex items-center justify-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor" className="mr-1">
+                <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
+              </svg>
+              Edit
             </button>
             <button
               onClick={(e) => {

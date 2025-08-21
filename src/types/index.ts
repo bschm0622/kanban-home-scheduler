@@ -12,3 +12,14 @@ export interface Task {
   completedAt?: number;
   createdAt: number;
 }
+
+export interface RecurringTask {
+  _id: Id<"recurringTasks">;
+  title: string;
+  description?: string;
+  priority: "low" | "medium" | "high";
+  frequency: "weekly" | "monthly";
+  preferredDay?: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+  isActive: boolean;
+  createdAt: number;
+}

@@ -155,6 +155,46 @@ export const checkExistingTasks = mutation({
   },
 });
 
+// Update recurring task details
+export const updateRecurringTask = mutation({
+  args: {
+    taskId: v.id("recurringTasks"),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    priority: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+    preferredDay: v.optional(v.union(
+      v.literal("monday"),
+      v.literal("tuesday"),
+      v.literal("wednesday"), 
+      v.literal("thursday"),
+      v.literal("friday"),
+      v.literal("saturday"),
+      v.literal("sunday")
+    )),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    const task = await ctx.db.get(args.taskId);
+    if (!task || task.userId !== identity.subject) {
+      throw new Error("Task not found or access denied");
+    }
+    
+    // Build update object with only provided fields
+    const updateData: any = {};
+    if (args.title !== undefined) updateData.title = args.title;
+    if (args.description !== undefined) updateData.description = args.description;
+    if (args.priority !== undefined) updateData.priority = args.priority;
+    // Always update preferredDay if it's provided (even if undefined to clear it)
+    if (args.hasOwnProperty('preferredDay')) updateData.preferredDay = args.preferredDay;
+    
+    return await ctx.db.patch(args.taskId, updateData);
+  },
+});
+
 // Toggle recurring task active status
 export const toggleRecurringTask = mutation({
   args: {

@@ -5,6 +5,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import type { Task, TaskStatus } from "../types";
 import { useUser, UserButton } from "@clerk/clerk-react";
 import TaskForm from "./TaskForm";
+import TaskEditModal from "./TaskEditModal";
 import RecurringTasksModal from "./RecurringTasksModal";
 import HistoryModal from "./HistoryModal";
 import TaskColumn from "./TaskColumn";
@@ -15,11 +16,14 @@ export default function KanbanBoard() {
   const { user } = useUser();
   const data = useQuery(api.tasks.getCurrentWeekTasks);
   const updateTaskStatus = useMutation(api.tasks.updateTaskStatus);
+  const updateTask = useMutation(api.tasks.updateTask);
   const completeTask = useMutation(api.tasks.completeTask);
   const deleteTask = useMutation(api.tasks.deleteTask);
   const rolloverWeek = useMutation(api.tasks.rolloverWeek);
   const autoRollover = useMutation(api.weekManager.autoRolloverPreviousWeeks);
   const [showNewTask, setShowNewTask] = useState(false);
+  const [showEditTask, setShowEditTask] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showRolloverConfirm, setShowRolloverConfirm] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -111,6 +115,14 @@ export default function KanbanBoard() {
 
   const handleDelete = (taskId: Id<"tasks">) => {
     deleteTask({ taskId });
+  };
+
+  const handleEdit = (taskId: Id<"tasks">) => {
+    const task = [...data.backlogTasks, ...data.weekTasks].find(t => t._id === taskId);
+    if (task) {
+      setEditingTask(task);
+      setShowEditTask(true);
+    }
   };
 
   const handleRolloverWeek = async () => {
@@ -253,6 +265,7 @@ export default function KanbanBoard() {
           onStatusChange={handleStatusChange}
           onComplete={handleComplete}
           onDelete={handleDelete}
+          onEdit={handleEdit}
           isBacklog={true}
           collapsible={true}
           globalExpanded={globalExpanded}
@@ -268,6 +281,7 @@ export default function KanbanBoard() {
             onStatusChange={handleStatusChange}
             onComplete={handleComplete}
             onDelete={handleDelete}
+            onEdit={handleEdit}
             isToday={today === day}
             date={weekDates[day]}
             collapsible={true}
@@ -283,6 +297,7 @@ export default function KanbanBoard() {
           onStatusChange={handleStatusChange}
           onComplete={handleComplete}
           onDelete={handleDelete}
+          onEdit={handleEdit}
           isCompleted={true}
           collapsible={true}
           globalExpanded={globalExpanded}
@@ -331,6 +346,16 @@ export default function KanbanBoard() {
       {/* Task creation modal */}
       <TaskForm isOpen={showNewTask} onClose={() => setShowNewTask(false)} />
 
+      {/* Task edit modal */}
+      <TaskEditModal 
+        isOpen={showEditTask} 
+        task={editingTask}
+        onClose={() => {
+          setShowEditTask(false);
+          setEditingTask(null);
+        }} 
+      />
+
       {/* Recurring tasks modal */}
       <RecurringTasksModal isOpen={showRecurring} onClose={() => setShowRecurring(false)} />
 
@@ -349,16 +374,16 @@ export default function KanbanBoard() {
               <p className="text-sm text-tertiary mb-4">
                 This will move all incomplete tasks back to the backlog. Completed tasks will be archived.
               </p>
-              <div className="flex space-x-3">
+              <div className="flex space-x-3" style={{paddingBottom: `env(safe-area-inset-bottom, 0px)`}}>
                 <button
                   onClick={() => setShowRolloverConfirm(false)}
-                  className="flex-1 px-4 py-2 border border-muted text-tertiary rounded-lg font-medium hover:bg-secondary touch-manipulation transition-colors"
+                  className="flex-1 px-4 py-4 border border-muted text-tertiary rounded-lg font-medium hover:bg-secondary touch-manipulation transition-colors min-h-[48px]"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleRolloverWeek}
-                  className="flex-1 px-4 py-2 bg-accent text-white rounded-lg font-medium hover:opacity-90 touch-manipulation transition-opacity"
+                  className="flex-1 px-4 py-4 bg-accent text-white rounded-lg font-medium hover:opacity-90 touch-manipulation transition-opacity min-h-[48px]"
                 >
                   Reset Week
                 </button>

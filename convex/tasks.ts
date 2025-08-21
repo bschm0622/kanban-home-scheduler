@@ -153,6 +153,36 @@ export const completeTask = mutation({
   },
 });
 
+// Update task details (title, description, priority)
+export const updateTask = mutation({
+  args: {
+    taskId: v.id("tasks"),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    priority: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    // Verify user owns this task
+    const task = await ctx.db.get(args.taskId);
+    if (!task || task.userId !== identity.subject) {
+      throw new Error("Task not found or access denied");
+    }
+    
+    // Build update object with only provided fields
+    const updateData: any = {};
+    if (args.title !== undefined) updateData.title = args.title;
+    if (args.description !== undefined) updateData.description = args.description;
+    if (args.priority !== undefined) updateData.priority = args.priority;
+    
+    return await ctx.db.patch(args.taskId, updateData);
+  },
+});
+
 // Delete a task
 export const deleteTask = mutation({
   args: {
