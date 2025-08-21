@@ -1,8 +1,117 @@
 ---
 import Layout from '@/layouts/Layout.astro';
-import ConvexApp from '@/components/ConvexApp';
 ---
 
-<Layout title="Home Organizer" description="Mobile kanban board for home organization">
-	<ConvexApp client:load />
+<Layout title="Kanban Home Scheduler" description="Personal task management with weekly kanban boards">
+	<main class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+		<!-- Hero Section -->
+		<div class="container mx-auto px-4 py-16">
+			<div class="max-w-4xl mx-auto text-center">
+				<!-- Logo/Icon -->
+				<div class="mb-8">
+					<div class="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+						<svg xmlns="http://www.w3.org/2000/svg" height="40px" viewBox="0 -960 960 960" width="40px" fill="white">
+							<path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm80 240v-80h80v80h-80Zm0 160v-80h80v80h-80Zm160-160v-80h80v80h-80Zm0 160v-80h80v80h-80Zm160-160v-80h80v80h-80Zm0 160v-80h80v80h-80Z"/>
+						</svg>
+					</div>
+					<h1 class="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-4">
+						Kanban Home<br/>
+						<span class="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Scheduler</span>
+					</h1>
+				</div>
+
+				<!-- Tagline -->
+				<p class="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
+					Organize your week with a beautiful kanban board designed for home task management
+				</p>
+
+				<!-- CTA Button -->
+				<div class="mb-12">
+					<a 
+						href="/signin" 
+						class="inline-flex items-center gap-3 bg-primary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition-all transform hover:scale-105 shadow-lg"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+							<path d="M480-120v-80h280v-560H480v-80h280q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H480Zm-80-160-55-58 102-102H120v-80h327L345-622l55-58 200 200-200 200Z"/>
+						</svg>
+						Get Started
+					</a>
+				</div>
+
+				<!-- Features Grid -->
+				<div class="grid md:grid-cols-3 gap-8 mb-16">
+					<div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+						<div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4 mx-auto">
+							<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#3b82f6">
+								<path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Z"/>
+							</svg>
+						</div>
+						<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Weekly Planning</h3>
+						<p class="text-gray-600 dark:text-gray-300 text-sm">
+							Organize tasks across Monday-Sunday columns for clear weekly visibility
+						</p>
+					</div>
+
+					<div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+						<div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mb-4 mx-auto">
+							<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#10b981">
+								<path d="M280-80 120-240l160-160 56 58-62 62h406v-160h80v240H274l62 62-56 58Zm-80-440v-240h486l-62-62 56-58 160 160-160 160-56-58 62-62H280v160h-80Z"/>
+							</svg>
+						</div>
+						<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Recurring Tasks</h3>
+						<p class="text-gray-600 dark:text-gray-300 text-sm">
+							Set up repeating tasks and easily generate them for each week
+						</p>
+					</div>
+
+					<div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+						<div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mb-4 mx-auto">
+							<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#8b5cf6">
+								<path d="M480-120q-138 0-240.5-91.5T122-440h82q14 104 92.5 172T480-200q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h110v80H120v-240h80v94q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Z"/>
+							</svg>
+						</div>
+						<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Track Progress</h3>
+						<p class="text-gray-600 dark:text-gray-300 text-sm">
+							View completion history and weekly performance statistics
+						</p>
+					</div>
+				</div>
+
+				<!-- Additional Features -->
+				<div class="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-100 dark:border-gray-700">
+					<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Everything you need to stay organized</h3>
+					<div class="grid md:grid-cols-2 gap-6 text-left">
+						<div class="flex items-start gap-3">
+							<div class="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+							<div>
+								<h4 class="font-medium text-gray-900 dark:text-white">Priority Levels</h4>
+								<p class="text-gray-600 dark:text-gray-300 text-sm">Color-coded priorities to focus on what matters most</p>
+							</div>
+						</div>
+						<div class="flex items-start gap-3">
+							<div class="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+							<div>
+								<h4 class="font-medium text-gray-900 dark:text-white">Mobile Optimized</h4>
+								<p class="text-gray-600 dark:text-gray-300 text-sm">Touch-friendly interface that works great on all devices</p>
+							</div>
+						</div>
+						<div class="flex items-start gap-3">
+							<div class="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+							<div>
+								<h4 class="font-medium text-gray-900 dark:text-white">Real-time Sync</h4>
+								<p class="text-gray-600 dark:text-gray-300 text-sm">Changes sync instantly across all your devices</p>
+							</div>
+						</div>
+						<div class="flex items-start gap-3">
+							<div class="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+							<div>
+								<h4 class="font-medium text-gray-900 dark:text-white">Secure & Private</h4>
+								<p class="text-gray-600 dark:text-gray-300 text-sm">Your data is encrypted and only accessible to you</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</main>
 </Layout>
