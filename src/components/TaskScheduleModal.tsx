@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { TaskStatus } from "../types/index";
 
 interface TaskScheduleModalProps {
@@ -6,6 +6,7 @@ interface TaskScheduleModalProps {
   onClose: () => void;
   onSchedule: (status: TaskStatus, weekId: string) => void;
   currentStatus: TaskStatus;
+  currentTaskWeekId?: string;
   currentWeekId: string;
   nextWeekId: string;
   taskTitle?: string;
@@ -16,11 +17,27 @@ export default function TaskScheduleModal({
   onClose, 
   onSchedule, 
   currentStatus,
+  currentTaskWeekId,
   currentWeekId,
   nextWeekId,
   taskTitle
 }: TaskScheduleModalProps) {
-  const [selectedStatus, setSelectedStatus] = useState<string>(`${currentStatus}:`);
+  // Smart default: pre-select current assignment unless it's completed
+  const getInitialSelection = () => {
+    if (currentStatus === "completed") return null;
+    if (currentStatus === "backlog") return { value: "backlog" as TaskStatus, weekId: "" };
+    // For day statuses, use the task's actual weekId
+    return { value: currentStatus, weekId: currentTaskWeekId || currentWeekId };
+  };
+
+  const [selectedOption, setSelectedOption] = useState<{value: TaskStatus, weekId: string} | null>(getInitialSelection());
+
+  // Reset selection when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedOption(getInitialSelection());
+    }
+  }, [isOpen, currentStatus, currentWeekId]);
 
   // Calculate dates for a specific week
   const getWeekDates = (weekId: string) => {
@@ -60,9 +77,8 @@ export default function TaskScheduleModal({
   if (!isOpen) return null;
 
   const handleSchedule = () => {
-    const selectedOption = allOptions.find(opt => `${opt.value}:${opt.weekId}` === selectedStatus);
     if (selectedOption) {
-      onSchedule(selectedOption.value as TaskStatus, selectedOption.weekId);
+      onSchedule(selectedOption.value, selectedOption.weekId);
     }
     onClose();
   };
@@ -94,25 +110,83 @@ export default function TaskScheduleModal({
               {taskTitle}
             </div>
           )}
-          <p className="text-sm text-tertiary mt-2">Choose any day from this week or next week</p>
+          {currentStatus === "completed" ? (
+            <div className="mt-2 p-2 bg-accent/10 border border-accent/20 rounded text-sm text-accent">
+              ⚠️ This will reopen the completed task. Choose where to reschedule it.
+            </div>
+          ) : (
+            <p className="text-sm text-tertiary mt-2">Choose any day from this week or next week</p>
+          )}
         </div>
 
         <div className="p-4 space-y-4">
+          {/* Backlog Option */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-foreground mb-3">
               Schedule for
             </label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full p-3 border border-muted rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-base bg-surface text-foreground"
+            <button
+              onClick={() => setSelectedOption({ value: "backlog", weekId: "" })}
+              className={`w-full p-2 rounded-lg border text-center transition-colors touch-manipulation min-h-[44px] relative ${
+                selectedOption?.value === "backlog" 
+                  ? 'border-primary bg-primary/10 text-primary' 
+                  : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
+              }`}
             >
-              {allOptions.map((option) => (
-                <option key={`${option.value}:${option.weekId}`} value={`${option.value}:${option.weekId}`}>
-                  {option.label}
-                </option>
+              <div className="font-medium flex items-center justify-center gap-1">
+                Backlog
+                {currentStatus === "backlog" && <span className="text-xs">•</span>}
+              </div>
+              <div className="text-xs opacity-70">Not scheduled</div>
+            </button>
+          </div>
+
+          {/* This Week */}
+          <div>
+            <h3 className="text-sm font-medium text-foreground mb-2">This Week</h3>
+            <div className="grid grid-cols-7 gap-1">
+              {currentWeekOptions.slice(1).map((option) => (
+                <button
+                  key={`current-${option.value}`}
+                  onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
+                  className={`p-2 rounded-md border transition-colors touch-manipulation min-h-[44px] text-center ${
+                    selectedOption?.value === option.value && selectedOption?.weekId === option.weekId
+                      ? 'border-primary bg-primary/10 text-primary' 
+                      : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
+                  }`}
+                >
+                  <div className="text-xs font-medium flex items-center justify-center gap-0.5">
+                    {option.value.charAt(0).toUpperCase()}
+                    {currentStatus === option.value && currentTaskWeekId === option.weekId && <span className="text-xs">•</span>}
+                  </div>
+                  <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
+                </button>
               ))}
-            </select>
+            </div>
+          </div>
+
+          {/* Next Week */}
+          <div>
+            <h3 className="text-sm font-medium text-foreground mb-2">Next Week</h3>
+            <div className="grid grid-cols-7 gap-1">
+              {nextWeekOptions.slice(1).map((option) => (
+                <button
+                  key={`next-${option.value}`}
+                  onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
+                  className={`p-2 rounded-md border transition-colors touch-manipulation min-h-[44px] text-center ${
+                    selectedOption?.value === option.value && selectedOption?.weekId === option.weekId
+                      ? 'border-primary bg-primary/10 text-primary' 
+                      : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
+                  }`}
+                >
+                  <div className="text-xs font-medium flex items-center justify-center gap-0.5">
+                    {option.value.charAt(0).toUpperCase()}
+                    {currentStatus === option.value && currentTaskWeekId === option.weekId && <span className="text-xs">•</span>}
+                  </div>
+                  <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex space-x-3 pt-2" style={{paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0px))`}}>
@@ -124,7 +198,12 @@ export default function TaskScheduleModal({
             </button>
             <button
               onClick={handleSchedule}
-              className="flex-1 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 touch-manipulation transition-opacity min-h-[48px]"
+              disabled={!selectedOption}
+              className={`flex-1 px-4 py-3 rounded-lg font-medium touch-manipulation transition-opacity min-h-[48px] ${
+                selectedOption 
+                  ? 'bg-primary text-white hover:opacity-90' 
+                  : 'bg-muted text-tertiary cursor-not-allowed'
+              }`}
             >
               Schedule
             </button>

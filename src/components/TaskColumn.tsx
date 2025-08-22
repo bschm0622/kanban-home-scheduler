@@ -51,6 +51,11 @@ export default function TaskColumn({
     }
   }, [globalExpanded]);
 
+  // Reset expanded state when isToday changes (e.g., when switching between week tabs)
+  useEffect(() => {
+    setIsExpanded(getDefaultExpanded());
+  }, [isToday]);
+
   // Report expanded state changes to parent
   useEffect(() => {
     if (onExpandedChange) {

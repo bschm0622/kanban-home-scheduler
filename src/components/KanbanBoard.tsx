@@ -328,7 +328,7 @@ export default function KanbanBoard() {
       </div>
 
       {/* Backlog column - always visible */}
-      <div className="px-4">
+      <div className="px-4 pb-3">
         <TaskColumn
           title="Backlog"
           tasks={taskGroups.backlog}
@@ -344,44 +344,51 @@ export default function KanbanBoard() {
         />
       </div>
 
-      {/* Week Tabs */}
-      <div className="px-4 py-2 bg-surface border-b border-muted/30">
-        <div className="flex bg-muted/20 rounded-lg p-1">
-          <button
-            onClick={() => setViewingCurrentWeek(true)}
-            className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-colors min-h-[48px] touch-manipulation ${
-              viewingCurrentWeek 
-                ? 'bg-primary text-white shadow-sm' 
-                : 'text-tertiary hover:text-foreground hover:bg-muted/30'
-            }`}
-          >
-            <div className="text-center">
-              <div className="font-semibold">This Week</div>
-              <div className="text-xs opacity-80">
-                {getWeekRange(currentWeekId)}
+      {/* Week Tabs with enclosed content */}
+      <div className="px-4">
+        <div className="bg-surface border border-muted rounded-lg overflow-hidden">
+          {/* Tab Headers */}
+          <div className="flex border-b border-muted/50">
+            <button
+              onClick={() => setViewingCurrentWeek(true)}
+              className={`flex-1 px-3 py-2 text-sm font-medium transition-colors relative touch-manipulation ${
+                viewingCurrentWeek 
+                  ? 'text-primary bg-surface' 
+                  : 'text-tertiary hover:text-foreground bg-muted/20'
+              }`}
+            >
+              <div className="text-center">
+                <div className="font-medium">This Week</div>
+                <div className="text-xs opacity-70">
+                  {getWeekRange(currentWeekId)}
+                </div>
               </div>
-            </div>
-          </button>
-          <button
-            onClick={() => setViewingCurrentWeek(false)}
-            className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-colors min-h-[48px] touch-manipulation ${
-              !viewingCurrentWeek 
-                ? 'bg-primary text-white shadow-sm' 
-                : 'text-tertiary hover:text-foreground hover:bg-muted/30'
-            }`}
-          >
-            <div className="text-center">
-              <div className="font-semibold">Next Week</div>
-              <div className="text-xs opacity-80">
-                {getWeekRange(nextWeekId)}
+              {viewingCurrentWeek && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+              )}
+            </button>
+            <button
+              onClick={() => setViewingCurrentWeek(false)}
+              className={`flex-1 px-3 py-2 text-sm font-medium transition-colors relative touch-manipulation ${
+                !viewingCurrentWeek 
+                  ? 'text-primary bg-surface' 
+                  : 'text-tertiary hover:text-foreground bg-muted/20'
+              }`}
+            >
+              <div className="text-center">
+                <div className="font-medium">Next Week</div>
+                <div className="text-xs opacity-70">
+                  {getWeekRange(nextWeekId)}
+                </div>
               </div>
-            </div>
-          </button>
-        </div>
-      </div>
+              {!viewingCurrentWeek && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+              )}
+            </button>
+          </div>
 
-      {/* Week-specific columns */}
-      <div className="kanban-columns">
+          {/* Tab Content - Week-specific columns */}
+          <div className="kanban-columns bg-surface">
         {/* Week days */}
         {dayNames.map((day) => (
           <TaskColumn
@@ -393,7 +400,7 @@ export default function KanbanBoard() {
             onDelete={handleDelete}
             onEdit={handleEdit}
             onSchedule={handleSchedule}
-            isToday={today === day}
+            isToday={viewingCurrentWeek && today === day}
             date={weekDates[day]}
             collapsible={true}
             globalExpanded={globalExpanded}
@@ -417,6 +424,8 @@ export default function KanbanBoard() {
             onExpandedChange={handleCompletedExpandedChange}
           />
         )}
+          </div>
+        </div>
       </div>
 
       {/* Bottom navigation */}
@@ -482,6 +491,7 @@ export default function KanbanBoard() {
       <TaskScheduleModal 
         isOpen={showScheduleTask} 
         currentStatus={schedulingTask?.status || "backlog"}
+        currentTaskWeekId={schedulingTask?.weekId}
         currentWeekId={currentWeekId}
         nextWeekId={nextWeekId}
         taskTitle={schedulingTask?.title}
