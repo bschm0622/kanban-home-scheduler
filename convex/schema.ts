@@ -7,17 +7,17 @@ export default defineSchema({
     description: v.optional(v.string()),
     status: v.union(
       v.literal("backlog"),
+      v.literal("sunday"),
       v.literal("monday"),
       v.literal("tuesday"), 
       v.literal("wednesday"),
       v.literal("thursday"),
       v.literal("friday"),
       v.literal("saturday"),
-      v.literal("sunday"),
       v.literal("completed")
     ),
     priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
-    weekId: v.optional(v.string()), // Format: YYYY-MM-DD (Monday of the week)
+    weekId: v.optional(v.string()), // Format: YYYY-MM-DD (Sunday of the week)
     completedAt: v.optional(v.number()),
     createdAt: v.number(),
     recurringTaskId: v.optional(v.id("recurringTasks")),
@@ -36,13 +36,13 @@ export default defineSchema({
     priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
     frequency: v.union(v.literal("weekly"), v.literal("monthly")),
     preferredDay: v.optional(v.union(
+      v.literal("sunday"),
       v.literal("monday"),
       v.literal("tuesday"),
       v.literal("wednesday"), 
       v.literal("thursday"),
       v.literal("friday"),
-      v.literal("saturday"),
-      v.literal("sunday")
+      v.literal("saturday")
     )),
     isActive: v.boolean(),
     createdAt: v.number(),

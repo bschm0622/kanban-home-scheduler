@@ -24,13 +24,13 @@ export const createRecurringTask = mutation({
     priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
     frequency: v.union(v.literal("weekly"), v.literal("monthly")),
     preferredDay: v.optional(v.union(
+      v.literal("sunday"),
       v.literal("monday"),
       v.literal("tuesday"),
       v.literal("wednesday"), 
       v.literal("thursday"),
       v.literal("friday"),
-      v.literal("saturday"),
-      v.literal("sunday")
+      v.literal("saturday")
     )),
   },
   handler: async (ctx, args) => {
@@ -52,10 +52,11 @@ export const createRecurringTask = mutation({
   },
 });
 
-// Generate tasks from selected recurring tasks for the current week
+// Generate tasks from selected recurring tasks for a specific week
 export const generateRecurringTasks = mutation({
   args: {
     taskIds: v.array(v.id("recurringTasks")),
+    weekId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -63,13 +64,16 @@ export const generateRecurringTasks = mutation({
       throw new Error("Not authenticated");
     }
     
-    // Get current week ID
-    const now = new Date();
-    const monday = new Date(now);
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-    monday.setDate(diff);
-    const currentWeekId = monday.toISOString().split('T')[0];
+    // Use provided weekId or calculate current week ID (Sunday-based)
+    let targetWeekId = args.weekId;
+    if (!targetWeekId) {
+      const now = new Date();
+      const sunday = new Date(now);
+      const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const diff = now.getDate() - day; // Days to subtract to get to Sunday
+      sunday.setDate(diff);
+      targetWeekId = sunday.toISOString().split('T')[0];
+    }
     
     const generatedTasks = [];
     
@@ -85,7 +89,7 @@ export const generateRecurringTasks = mutation({
       // Check if we already generated this recurring task for this week
       const existingTask = await ctx.db
         .query("tasks")
-        .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", currentWeekId))
+        .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", targetWeekId))
         .filter((q) => q.eq(q.field("recurringTaskId"), recurringTask._id))
         .first();
       
@@ -96,7 +100,7 @@ export const generateRecurringTasks = mutation({
           description: recurringTask.description,
           priority: recurringTask.priority,
           status: recurringTask.preferredDay || "backlog",
-          weekId: recurringTask.preferredDay ? currentWeekId : undefined,
+          weekId: recurringTask.preferredDay ? targetWeekId : undefined,
           recurringTaskId: recurringTask._id,
           createdAt: Date.now(),
           userId: identity.subject,
@@ -121,13 +125,13 @@ export const checkExistingTasks = mutation({
       throw new Error("Not authenticated");
     }
     
-    // Get current week ID
+    // Get current week ID (Sunday-based)
     const now = new Date();
-    const monday = new Date(now);
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-    monday.setDate(diff);
-    const currentWeekId = monday.toISOString().split('T')[0];
+    const sunday = new Date(now);
+    const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const diff = now.getDate() - day; // Days to subtract to get to Sunday
+    sunday.setDate(diff);
+    const currentWeekId = sunday.toISOString().split('T')[0];
     
     const availableTasks = [];
     
@@ -163,13 +167,13 @@ export const updateRecurringTask = mutation({
     description: v.optional(v.string()),
     priority: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
     preferredDay: v.optional(v.union(
+      v.literal("sunday"),
       v.literal("monday"),
       v.literal("tuesday"),
       v.literal("wednesday"), 
       v.literal("thursday"),
       v.literal("friday"),
-      v.literal("saturday"),
-      v.literal("sunday")
+      v.literal("saturday")
     )),
   },
   handler: async (ctx, args) => {

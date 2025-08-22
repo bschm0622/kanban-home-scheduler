@@ -1,6 +1,6 @@
 import type { Id } from "../../convex/_generated/dataModel";
 
-export type TaskStatus = "backlog" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday" | "completed";
+export type TaskStatus = "backlog" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "completed";
 
 export interface Task {
   _id: Id<"tasks">;
@@ -19,7 +19,7 @@ export interface RecurringTask {
   description?: string;
   priority: "low" | "medium" | "high";
   frequency: "weekly" | "monthly";
-  preferredDay?: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+  preferredDay?: "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday";
   isActive: boolean;
   createdAt: number;
 }

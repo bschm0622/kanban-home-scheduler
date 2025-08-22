@@ -8,9 +8,10 @@ interface TaskCardProps {
   onComplete: (taskId: Id<"tasks">) => void;
   onDelete: (taskId: Id<"tasks">) => void;
   onEdit: (taskId: Id<"tasks">) => void;
+  onSchedule: (taskId: Id<"tasks">) => void;
 }
 
-export default function TaskCard({ task, onStatusChange, onComplete, onDelete, onEdit }: TaskCardProps) {
+export default function TaskCard({ task, onStatusChange, onComplete, onDelete, onEdit, onSchedule }: TaskCardProps) {
   const [showActions, setShowActions] = useState(false);
 
   return (
@@ -46,42 +47,18 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
       
       {showActions && (
         <div className="task-actions">
-          {task.status === 'completed' && (
-            <div className="text-xs text-tertiary mb-2 px-1">
-              Reopen task:
-            </div>
-          )}
-          <div className="task-action-grid">
-            {["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map((day) => (
-              <button
-                key={day}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStatusChange(task._id, day as TaskStatus);
-                }}
-                className={`action-button day ${task.status === day ? 'active' : ''}`}
-              >
-                {day === 'monday' ? 'M' : 
-                 day === 'tuesday' ? 'T' : 
-                 day === 'wednesday' ? 'W' : 
-                 day === 'thursday' ? 'R' : 
-                 day === 'friday' ? 'F' : 
-                 day === 'saturday' ? 'S' : 'U'}
-              </button>
-            ))}
-          </div>
           <div className="task-action-grid mt-2" style={{gridTemplateColumns: 'repeat(3, 1fr)'}}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onStatusChange(task._id, "backlog");
+                onSchedule(task._id);
               }}
               className="action-button day flex items-center justify-center"
             >
               <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor" className="mr-1">
-                <path d="M320-280q17 0 28.5-11.5T360-320q0-17-11.5-28.5T320-360q-17 0-28.5 11.5T280-320q0 17 11.5 28.5T320-280Zm0-160q17 0 28.5-11.5T360-480q0-17-11.5-28.5T320-520q-17 0-28.5 11.5T280-480q0 17 11.5 28.5T320-440Zm0-160q17 0 28.5-11.5T360-640q0-17-11.5-28.5T320-680q-17 0-28.5 11.5T280-640q0 17 11.5 28.5T320-600Zm120 320h240v-80H440v80Zm0-160h240v-80H440v80Zm0-160h240v-80H440v80ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z"/>
+                <path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm280 240q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-160 0q-17 0-28.5-11.5T280-440q0-17 11.5-28.5T320-480q17 0 28.5 11.5T360-440q0 17-11.5 28.5T320-400Zm320 0q-17 0-28.5-11.5T520-440q0-17 11.5-28.5T560-480q17 0 28.5 11.5T600-440q0 17-11.5 28.5T560-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-160 0q-17 0-28.5-11.5T280-280q0-17 11.5-28.5T320-320q17 0 28.5 11.5T360-280q0 17-11.5 28.5T320-240Zm320 0q-17 0-28.5-11.5T520-280q0-17 11.5-28.5T560-320q17 0 28.5 11.5T600-280q0 17-11.5 28.5T560-240Z"/>
               </svg>
-              Backlog
+              Schedule
             </button>
             <button
               onClick={(e) => {
