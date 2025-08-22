@@ -319,16 +319,6 @@ export const rolloverWeek = mutation({
       });
     }
     
-    // Archive the week
-    await ctx.db.insert("weeks", {
-      weekId: targetWeekId,
-      startDate: targetWeekId,
-      endDate: new Date(new Date(targetWeekId).getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      isArchived: true,
-      createdAt: Date.now(),
-      userId: identity.subject,
-    });
-    
     return { movedTasks: incompleteTasks.length };
   },
 });

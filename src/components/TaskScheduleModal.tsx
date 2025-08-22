@@ -110,12 +110,10 @@ export default function TaskScheduleModal({
               {taskTitle}
             </div>
           )}
-          {currentStatus === "completed" ? (
+          {currentStatus === "completed" && (
             <div className="mt-2 p-2 bg-accent/10 border border-accent/20 rounded text-sm text-accent">
               ⚠️ This will reopen the completed task. Choose where to reschedule it.
             </div>
-          ) : (
-            <p className="text-sm text-tertiary mt-2">Choose any day from this week or next week</p>
           )}
         </div>
 

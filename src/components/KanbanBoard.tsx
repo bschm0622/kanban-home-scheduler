@@ -3,7 +3,9 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { Task, TaskStatus } from "../types";
-import { useUser, UserButton } from "@clerk/clerk-react";
+import { useUser } from "@clerk/clerk-react";
+import { getCurrentWeekId, getNextWeekId, getWeekDates, getWeekRange } from "../utils/weekUtils";
+import { groupTasksByStatus } from "../utils/taskUtils";
 import TaskForm from "./TaskForm";
 import TaskEditModal from "./TaskEditModal";
 import TaskScheduleModal from "./TaskScheduleModal";
@@ -11,6 +13,7 @@ import RecurringTasksModal from "./RecurringTasksModal";
 import HistoryModal from "./HistoryModal";
 import TaskColumn from "./TaskColumn";
 import PWAInstallPrompt, { useAppVisitTracker } from "./PWAInstallPrompt";
+import AppHeader from "./AppHeader";
 
 const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
@@ -22,23 +25,6 @@ export default function KanbanBoard() {
   const [viewingCurrentWeek, setViewingCurrentWeek] = useState(true);
   
   // Calculate current and next week IDs
-  const getCurrentWeekId = () => {
-    const now = new Date();
-    const sunday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const diff = sunday.getDate() - day; // Days to subtract to get to Sunday
-    sunday.setDate(diff);
-    return sunday.toISOString().split('T')[0];
-  };
-
-  const getNextWeekId = () => {
-    const now = new Date();
-    const sunday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const day = now.getDay();
-    const diff = sunday.getDate() - day + 7; // Add 7 days for next week
-    sunday.setDate(diff);
-    return sunday.toISOString().split('T')[0];
-  };
 
   const currentWeekId = getCurrentWeekId();
   const nextWeekId = getNextWeekId();
@@ -202,75 +188,9 @@ export default function KanbanBoard() {
     }
   };
 
-  const groupTasksByStatus = () => {
-    const groups: Record<TaskStatus, Task[]> = {
-      backlog: [],
-      monday: [],
-      tuesday: [],
-      wednesday: [],
-      thursday: [],
-      friday: [],
-      saturday: [],
-      sunday: [],
-      completed: []
-    };
-
-    // Priority sorting function: high -> medium -> low
-    const sortByPriority = (tasks: Task[]) => {
-      return tasks.sort((a, b) => {
-        const priorityOrder = { high: 0, medium: 1, low: 2 };
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      });
-    };
-
-    // Add backlog tasks with priority sorting
-    groups.backlog = sortByPriority([...data.backlogTasks]);
-
-    // Add week tasks to their respective days with priority sorting
-    data.weekTasks.forEach(task => {
-      if (groups[task.status]) {
-        groups[task.status].push(task);
-      }
-    });
-
-    // Sort each day's tasks by priority
-    Object.keys(groups).forEach(status => {
-      if (status !== 'backlog') { // backlog already sorted above
-        groups[status as TaskStatus] = sortByPriority(groups[status as TaskStatus]);
-      }
-    });
-
-    return groups;
-  };
-
-  const taskGroups = groupTasksByStatus();
+  const taskGroups = groupTasksByStatus(data.backlogTasks, data.weekTasks);
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   
-  // Calculate week dates for the currently viewing week (Sunday-Saturday)
-  const getWeekDates = (weekId: string) => {
-    const sunday = new Date(weekId + 'T00:00:00'); // Parse the week ID as Sunday
-    
-    const dates: Record<string, string> = {};
-    dayNames.forEach((dayName, index) => {
-      const date = new Date(sunday);
-      date.setDate(sunday.getDate() + index);
-      dates[dayName] = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    });
-    
-    return dates;
-  };
-
-  // Helper to get a clean week range display (Sun - Sat)
-  const getWeekRange = (weekId: string) => {
-    const sunday = new Date(weekId + 'T00:00:00');
-    const saturday = new Date(sunday);
-    saturday.setDate(sunday.getDate() + 6);
-    
-    const startStr = sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const endStr = saturday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    
-    return `${startStr} - ${endStr}`;
-  };
   
   const weekDates = getWeekDates(viewingWeekId);
   const todayDate = new Date().toLocaleDateString('en-US', { 
@@ -281,95 +201,40 @@ export default function KanbanBoard() {
 
   return (
     <div className="app">
-      {/* Minimal header */}
-      <div className="app-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-foreground">
-              {user?.firstName ? `${user.firstName}'s Tasks` : 'Home Tasks'}
-            </h1>
-            <p className="text-xs text-tertiary">
-              {todayDate}
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <div dangerouslySetInnerHTML={{
-              __html: `
-                <button
-                  type="button"
-                  aria-label="Toggle theme"
-                  class="theme-toggle-btn flex h-8 w-8 items-center justify-center rounded-lg transition-all hover:bg-muted/50"
-                  onclick="
-                    document.documentElement.classList.toggle('dark');
-                    const isDark = document.documentElement.classList.contains('dark');
-                    document.documentElement.classList.toggle('light', !isDark);
-                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                  "
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 stroke-current dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                  </svg>
-                  <svg xmlns="http://www.w3.org/2000/svg" class="hidden h-4 w-4 stroke-current dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                  </svg>
-                </button>
-              `
-            }} />
-            <button
-              onClick={() => {
-                const newExpandedState = !allExpanded;
-                setGlobalExpanded(newExpandedState);
-                // Reset global trigger after columns update
-                setTimeout(() => setGlobalExpanded(null), 100);
-              }}
-              className="bg-muted/30 text-tertiary hover:bg-muted/50 px-3 py-1.5 rounded-lg text-sm font-medium touch-manipulation transition-colors"
-              title={allExpanded ? "Collapse All" : "Expand All"}
-            >
-              {allExpanded ? (
-                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
-                  <path d="m356-160-56-56 180-180 180 180-56 56-124-124-124 124Zm124-404L300-744l56-56 124 124 124-124 56 56-180 180Z"/>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
-                  <path d="M480-80 240-320l57-57 183 183 183-183 57 57L480-80ZM298-584l-58-56 240-240 240 240-58 56-182-182-182 182Z"/>
-                </svg>
-              )}
-            </button>
-            <UserButton 
-              appearance={{
-                elements: {
-                  avatarBox: "w-8 h-8",
-                  userButtonPopoverCard: "bg-surface border border-muted",
-                  userButtonPopoverActionButton: "text-foreground hover:bg-secondary",
-                }
-              }}
-              afterSignOutUrl="/signin"
-            />
-          </div>
+      <AppHeader 
+        userName={user?.firstName || undefined}
+        todayDate={todayDate}
+        allExpanded={allExpanded}
+        onToggleExpandAll={() => {
+          const newExpandedState = !allExpanded;
+          setGlobalExpanded(newExpandedState);
+          // Reset global trigger after columns update
+          setTimeout(() => setGlobalExpanded(null), 100);
+        }}
+      />
+
+      {/* Main scrollable content area */}
+      <div className="flex-1 overflow-y-auto" style={{paddingBottom: `calc(9rem + env(safe-area-inset-bottom, 0px))`}}>
+        {/* Backlog column - always visible */}
+        <div className="px-4 py-3 bg-secondary/30 rounded-lg">
+          <TaskColumn
+            title="Backlog"
+            tasks={taskGroups.backlog}
+            onStatusChange={handleStatusChange}
+            onComplete={handleComplete}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
+            onSchedule={handleSchedule}
+            isBacklog={true}
+            collapsible={true}
+            globalExpanded={globalExpanded}
+            onExpandedChange={handleBacklogExpandedChange}
+          />
         </div>
-      </div>
 
-      {/* Backlog column - always visible */}
-      <div className="px-4 pb-3">
-        <TaskColumn
-          title="Backlog"
-          tasks={taskGroups.backlog}
-          onStatusChange={handleStatusChange}
-          onComplete={handleComplete}
-          onDelete={handleDelete}
-          onEdit={handleEdit}
-          onSchedule={handleSchedule}
-          isBacklog={true}
-          collapsible={true}
-          globalExpanded={globalExpanded}
-          onExpandedChange={handleBacklogExpandedChange}
-        />
-      </div>
-
-      {/* Week Tabs with enclosed content */}
-      <div className="px-4">
-        <div className="bg-surface border border-muted rounded-lg overflow-hidden">
+        {/* Week Tabs with enclosed content */}
+        <div className="px-4">
+          <div className="bg-surface border border-muted rounded-lg overflow-hidden">
           {/* Tab Headers */}
           <div className="flex border-b border-muted/50">
             <button
@@ -448,6 +313,7 @@ export default function KanbanBoard() {
           />
         )}
           </div>
+        </div>
         </div>
       </div>
 

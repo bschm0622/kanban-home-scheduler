@@ -138,16 +138,15 @@
 
 /* Clean minimal mobile design */
 .app {
-    @apply min-h-screen bg-background text-foreground;
+    @apply h-screen bg-background text-foreground flex flex-col;
 }
 
 .app-header {
-    @apply bg-surface/80 backdrop-blur-sm border-b border-muted/50 px-4 py-2;
+    @apply bg-surface/80 backdrop-blur-sm border-b border-muted/50 px-4 py-2 flex-shrink-0;
 }
 
 .kanban-columns {
     @apply space-y-3 p-3;
-    padding-bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
 }
 
 .kanban-column {
