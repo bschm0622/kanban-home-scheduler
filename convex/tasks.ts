@@ -292,18 +292,22 @@ export const deleteTask = mutation({
 
 // Move incomplete tasks back to backlog (called at week end)
 export const rolloverWeek = mutation({
-  handler: async (ctx) => {
+  args: {
+    weekId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Not authenticated");
     }
     
-    const currentWeekId = getCurrentWeekId();
+    const targetWeekId = args.weekId || getCurrentWeekId();
     
-    // Find all incomplete tasks from current week for this user
+    
+    // Find all incomplete tasks from target week for this user
     const incompleteTasks = await ctx.db
       .query("tasks")
-      .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", currentWeekId))
+      .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", targetWeekId))
       .filter((q) => q.neq(q.field("status"), "completed"))
       .collect();
     
@@ -317,13 +321,43 @@ export const rolloverWeek = mutation({
     
     // Archive the week
     await ctx.db.insert("weeks", {
-      weekId: currentWeekId,
-      startDate: currentWeekId,
-      endDate: new Date(new Date(currentWeekId).getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      weekId: targetWeekId,
+      startDate: targetWeekId,
+      endDate: new Date(new Date(targetWeekId).getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       isArchived: true,
       createdAt: Date.now(),
       userId: identity.subject,
     });
+    
+    return { movedTasks: incompleteTasks.length };
+  },
+});
+
+// Manual reset for a specific week (used by reset button)
+export const resetWeek = mutation({
+  args: {
+    weekId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    // Find all incomplete tasks from specified week for this user
+    const incompleteTasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", args.weekId))
+      .filter((q) => q.neq(q.field("status"), "completed"))
+      .collect();
+    
+    // Move them back to backlog
+    for (const task of incompleteTasks) {
+      await ctx.db.patch(task._id, {
+        status: "backlog",
+        weekId: undefined,
+      });
+    }
     
     return { movedTasks: incompleteTasks.length };
   },

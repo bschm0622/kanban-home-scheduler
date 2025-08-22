@@ -25,6 +25,7 @@ export const autoRolloverPreviousWeeks = mutation({
     nextWeekSunday.setDate(nextWeekSunday.getDate() + 7);
     const nextWeekId = nextWeekSunday.toISOString().split('T')[0];
     
+    
     // Find all tasks for this user that have a weekId from PAST weeks (not current or future weeks) and not completed
     const orphanedTasks = await ctx.db
       .query("tasks")

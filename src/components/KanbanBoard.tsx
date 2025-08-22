@@ -55,7 +55,7 @@ export default function KanbanBoard() {
   const updateTask = useMutation(api.tasks.updateTask);
   const completeTask = useMutation(api.tasks.completeTask);
   const deleteTask = useMutation(api.tasks.deleteTask);
-  const rolloverWeek = useMutation(api.tasks.rolloverWeek);
+  const resetWeek = useMutation(api.tasks.resetWeek);
   const autoRollover = useMutation(api.weekManager.autoRolloverPreviousWeeks);
   const [showNewTask, setShowNewTask] = useState(false);
   const [showEditTask, setShowEditTask] = useState(false);
@@ -189,18 +189,22 @@ export default function KanbanBoard() {
 
   const handleRolloverWeek = async () => {
     try {
-      const result = await rolloverWeek();
+      const result = await resetWeek({ 
+        weekId: viewingWeekId 
+      });
       setShowRolloverConfirm(false);
       // You could show a toast notification here
-      console.log(`Moved ${result.movedTasks} incomplete tasks back to backlog`);
+      if (result.movedTasks > 0) {
+        console.log(`Moved ${result.movedTasks} incomplete tasks back to backlog`);
+      }
     } catch (error) {
-      console.error("Failed to rollover week:", error);
+      console.error("Failed to reset week:", error);
     }
   };
 
   const groupTasksByStatus = () => {
     const groups: Record<TaskStatus, Task[]> = {
-      backlog: data.backlogTasks,
+      backlog: [],
       monday: [],
       tuesday: [],
       wednesday: [],
@@ -211,9 +215,28 @@ export default function KanbanBoard() {
       completed: []
     };
 
+    // Priority sorting function: high -> medium -> low
+    const sortByPriority = (tasks: Task[]) => {
+      return tasks.sort((a, b) => {
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      });
+    };
+
+    // Add backlog tasks with priority sorting
+    groups.backlog = sortByPriority([...data.backlogTasks]);
+
+    // Add week tasks to their respective days with priority sorting
     data.weekTasks.forEach(task => {
       if (groups[task.status]) {
         groups[task.status].push(task);
+      }
+    });
+
+    // Sort each day's tasks by priority
+    Object.keys(groups).forEach(status => {
+      if (status !== 'backlog') { // backlog already sorted above
+        groups[status as TaskStatus] = sortByPriority(groups[status as TaskStatus]);
       }
     });
 
@@ -449,15 +472,13 @@ export default function KanbanBoard() {
             </svg>
             <span className="text-xs">History</span>
           </button>
-          {viewingCurrentWeek && (
-            <button 
-              onClick={() => setShowRolloverConfirm(true)}
-              className="nav-button secondary"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-250q78 0 134-56t56-134q0-78-56-134t-134-56q-38 0-71 14t-59 38v-62h-60v170h170v-60h-72q17-18 41-29t51-11q54 0 92 38t38 92q0 54-38 92t-92 38q-44 0-77-25.5T356-400h-62q14 65 65.5 107.5T480-250ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-446L526-800H240v640Zm0 0v-640 640Z" /></svg>
-              <span className="text-xs">Reset</span>
-            </button>
-          )}
+          <button 
+            onClick={() => setShowRolloverConfirm(true)}
+            className="nav-button secondary"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-250q78 0 134-56t56-134q0-78-56-134t-134-56q-38 0-71 14t-59 38v-62h-60v170h170v-60h-72q17-18 41-29t51-11q54 0 92 38t38 92q0 54-38 92t-92 38q-44 0-77-25.5T356-400h-62q14 65 65.5 107.5T480-250ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-446L526-800H240v640Zm0 0v-640 640Z" /></svg>
+            <span className="text-xs">Reset</span>
+          </button>
           <button 
             onClick={() => setShowNewTask(true)}
             className="nav-button primary"
@@ -515,26 +536,44 @@ export default function KanbanBoard() {
 
       {/* Week rollover confirmation modal */}
       {showRolloverConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-surface rounded-lg shadow-lg max-w-sm w-full border border-muted">
-            <div className="p-4">
-              <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-250q78 0 134-56t56-134q0-78-56-134t-134-56q-38 0-71 14t-59 38v-62h-60v170h170v-60h-72q17-18 41-29t51-11q54 0 92 38t38 92q0 54-38 92t-92 38q-44 0-77-25.5T356-400h-62q14 65 65.5 107.5T480-250ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-446L526-800H240v640Zm0 0v-640 640Z" /></svg>
-                Reset Week?
-              </h3>
-              <p className="text-sm text-tertiary mb-4">
-                This will move all incomplete tasks back to the backlog. Completed tasks will be archived.
-              </p>
-              <div className="flex space-x-3" style={{paddingBottom: `env(safe-area-inset-bottom, 0px)`}}>
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center sm:justify-center p-4 z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowRolloverConfirm(false);
+            }
+          }}
+        >
+          <div className="bg-surface w-full sm:w-96 sm:rounded-lg rounded-t-lg border border-muted">
+            <div className="p-4 border-b border-muted">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-250q78 0 134-56t56-134q0-78-56-134t-134-56q-38 0-71 14t-59 38v-62h-60v170h170v-60h-72q17-18 41-29t51-11q54 0 92 38t38 92q0 54-38 92t-92 38q-44 0-77-25.5T356-400h-62q14 65 65.5 107.5T480-250ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-446L526-800H240v640Zm0 0v-640 640Z" /></svg>
+                  Reset {viewingCurrentWeek ? 'This' : 'Next'} Week?
+                </h2>
                 <button
                   onClick={() => setShowRolloverConfirm(false)}
-                  className="flex-1 px-4 py-4 border border-muted text-tertiary rounded-lg font-medium hover:bg-secondary touch-manipulation transition-colors min-h-[48px]"
+                  className="text-tertiary hover:text-foreground text-2xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-tertiary mt-2">
+                This will move all incomplete tasks from {viewingCurrentWeek ? 'this week' : 'next week'} back to the backlog. Completed tasks will be archived.
+              </p>
+            </div>
+
+            <div className="p-4">
+              <div className="flex space-x-3" style={{paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0px))`}}>
+                <button
+                  onClick={() => setShowRolloverConfirm(false)}
+                  className="flex-1 px-4 py-3 border border-muted text-tertiary rounded-lg font-medium hover:bg-secondary touch-manipulation transition-colors min-h-[48px]"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleRolloverWeek}
-                  className="flex-1 px-4 py-4 bg-accent text-white rounded-lg font-medium hover:opacity-90 touch-manipulation transition-opacity min-h-[48px]"
+                  className="flex-1 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 touch-manipulation transition-opacity min-h-[48px]"
                 >
                   Reset Week
                 </button>
