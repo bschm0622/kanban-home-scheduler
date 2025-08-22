@@ -216,7 +216,7 @@ export default function KanbanBoard() {
       {/* Main scrollable content area */}
       <div className="flex-1 overflow-y-auto" style={{paddingBottom: `calc(9rem + env(safe-area-inset-bottom, 0px))`}}>
         {/* Backlog column - always visible */}
-        <div className="px-4 py-3 bg-secondary/30 rounded-lg">
+        <div className="px-4 py-3">
           <TaskColumn
             title="Backlog"
             tasks={taskGroups.backlog}
