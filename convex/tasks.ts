@@ -1,14 +1,23 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
-// Get current week ID (Monday of current week in YYYY-MM-DD format)
+// Get current week ID (Sunday of current week in YYYY-MM-DD format)
 function getCurrentWeekId(): string {
   const now = new Date();
-  const monday = new Date(now);
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  monday.setDate(diff);
-  return monday.toISOString().split('T')[0];
+  const sunday = new Date(now);
+  const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const diff = now.getDate() - day; // Days to subtract to get to Sunday
+  sunday.setDate(diff);
+  return sunday.toISOString().split('T')[0];
+}
+
+// Get week ID for any date (Sunday of that week in YYYY-MM-DD format)
+function getWeekId(date: Date): string {
+  const sunday = new Date(date);
+  const day = date.getDay();
+  const diff = date.getDate() - day;
+  sunday.setDate(diff);
+  return sunday.toISOString().split('T')[0];
 }
 
 // Get all tasks for the current week
@@ -40,6 +49,36 @@ export const getCurrentWeekTasks = query({
   },
 });
 
+// Get tasks for a specific week
+export const getWeekTasks = query({
+  args: {
+    weekId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    // Get all tasks for specified week + backlog for this user
+    const weekTasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_user_and_week", (q) => q.eq("userId", identity.subject).eq("weekId", args.weekId))
+      .collect();
+    
+    const backlogTasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_user_and_status", (q) => q.eq("userId", identity.subject).eq("status", "backlog"))
+      .collect();
+    
+    return {
+      weekId: args.weekId,
+      weekTasks,
+      backlogTasks,
+    };
+  },
+});
+
 // Create a new task
 export const createTask = mutation({
   args: {
@@ -48,13 +87,13 @@ export const createTask = mutation({
     priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
     status: v.optional(v.union(
       v.literal("backlog"),
+      v.literal("sunday"),
       v.literal("monday"),
       v.literal("tuesday"), 
       v.literal("wednesday"),
       v.literal("thursday"),
       v.literal("friday"),
-      v.literal("saturday"),
-      v.literal("sunday")
+      v.literal("saturday")
     )),
   },
   handler: async (ctx, args) => {
@@ -84,13 +123,13 @@ export const updateTaskStatus = mutation({
     taskId: v.id("tasks"),
     newStatus: v.union(
       v.literal("backlog"),
+      v.literal("sunday"),
       v.literal("monday"),
       v.literal("tuesday"), 
       v.literal("wednesday"),
       v.literal("thursday"),
       v.literal("friday"),
       v.literal("saturday"),
-      v.literal("sunday"),
       v.literal("completed")
     ),
   },

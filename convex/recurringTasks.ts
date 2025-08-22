@@ -24,13 +24,13 @@ export const createRecurringTask = mutation({
     priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
     frequency: v.union(v.literal("weekly"), v.literal("monthly")),
     preferredDay: v.optional(v.union(
+      v.literal("sunday"),
       v.literal("monday"),
       v.literal("tuesday"),
       v.literal("wednesday"), 
       v.literal("thursday"),
       v.literal("friday"),
-      v.literal("saturday"),
-      v.literal("sunday")
+      v.literal("saturday")
     )),
   },
   handler: async (ctx, args) => {
@@ -163,13 +163,13 @@ export const updateRecurringTask = mutation({
     description: v.optional(v.string()),
     priority: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
     preferredDay: v.optional(v.union(
+      v.literal("sunday"),
       v.literal("monday"),
       v.literal("tuesday"),
       v.literal("wednesday"), 
       v.literal("thursday"),
       v.literal("friday"),
-      v.literal("saturday"),
-      v.literal("sunday")
+      v.literal("saturday")
     )),
   },
   handler: async (ctx, args) => {

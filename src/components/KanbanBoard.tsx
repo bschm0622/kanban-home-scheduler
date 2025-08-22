@@ -9,11 +9,13 @@ import TaskEditModal from "./TaskEditModal";
 import RecurringTasksModal from "./RecurringTasksModal";
 import HistoryModal from "./HistoryModal";
 import TaskColumn from "./TaskColumn";
+import PWAInstallPrompt, { useAppVisitTracker } from "./PWAInstallPrompt";
 
-const dayNames = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
 export default function KanbanBoard() {
   const { user } = useUser();
+  useAppVisitTracker(); // Track app visits for PWA prompt logic
   const data = useQuery(api.tasks.getCurrentWeekTasks);
   const updateTaskStatus = useMutation(api.tasks.updateTaskStatus);
   const updateTask = useMutation(api.tasks.updateTask);
@@ -161,18 +163,18 @@ export default function KanbanBoard() {
   const taskGroups = groupTasksByStatus();
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   
-  // Calculate week dates
+  // Calculate week dates (Sunday-Saturday)
   const getWeekDates = () => {
     const now = new Date();
-    const monday = new Date(now);
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-    monday.setDate(diff);
+    const sunday = new Date(now);
+    const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const diff = now.getDate() - day; // Days to subtract to get to Sunday
+    sunday.setDate(diff);
     
     const dates: Record<string, string> = {};
     dayNames.forEach((dayName, index) => {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + index);
+      const date = new Date(sunday);
+      date.setDate(sunday.getDate() + index);
       dates[dayName] = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     });
     
@@ -392,6 +394,9 @@ export default function KanbanBoard() {
           </div>
         </div>
       )}
+
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
     </div>
   );
 }
