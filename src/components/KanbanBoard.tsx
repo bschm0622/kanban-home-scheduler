@@ -236,6 +236,18 @@ export default function KanbanBoard() {
     
     return dates;
   };
+
+  // Helper to get a clean week range display (Sun - Sat)
+  const getWeekRange = (weekId: string) => {
+    const sunday = new Date(weekId + 'T00:00:00');
+    const saturday = new Date(sunday);
+    saturday.setDate(sunday.getDate() + 6);
+    
+    const startStr = sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const endStr = saturday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    return `${startStr} - ${endStr}`;
+  };
   
   const weekDates = getWeekDates(viewingWeekId);
   const todayDate = new Date().toLocaleDateString('en-US', { 
@@ -259,29 +271,6 @@ export default function KanbanBoard() {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Week Toggle */}
-            <div className="bg-muted/30 rounded-lg p-1 flex">
-              <button
-                onClick={() => setViewingCurrentWeek(true)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  viewingCurrentWeek 
-                    ? 'bg-primary text-white' 
-                    : 'text-tertiary hover:text-foreground'
-                }`}
-              >
-                This Week
-              </button>
-              <button
-                onClick={() => setViewingCurrentWeek(false)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  !viewingCurrentWeek 
-                    ? 'bg-primary text-white' 
-                    : 'text-tertiary hover:text-foreground'
-                }`}
-              >
-                Next Week
-              </button>
-            </div>
             <div dangerouslySetInnerHTML={{
               __html: `
                 <button
@@ -338,9 +327,8 @@ export default function KanbanBoard() {
         </div>
       </div>
 
-      {/* Clean column layout */}
-      <div className="kanban-columns">
-        {/* Backlog */}
+      {/* Backlog column - always visible */}
+      <div className="px-4">
         <TaskColumn
           title="Backlog"
           tasks={taskGroups.backlog}
@@ -354,7 +342,46 @@ export default function KanbanBoard() {
           globalExpanded={globalExpanded}
           onExpandedChange={handleBacklogExpandedChange}
         />
+      </div>
 
+      {/* Week Tabs */}
+      <div className="px-4 py-2 bg-surface border-b border-muted/30">
+        <div className="flex bg-muted/20 rounded-lg p-1">
+          <button
+            onClick={() => setViewingCurrentWeek(true)}
+            className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-colors min-h-[48px] touch-manipulation ${
+              viewingCurrentWeek 
+                ? 'bg-primary text-white shadow-sm' 
+                : 'text-tertiary hover:text-foreground hover:bg-muted/30'
+            }`}
+          >
+            <div className="text-center">
+              <div className="font-semibold">This Week</div>
+              <div className="text-xs opacity-80">
+                {getWeekRange(currentWeekId)}
+              </div>
+            </div>
+          </button>
+          <button
+            onClick={() => setViewingCurrentWeek(false)}
+            className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-colors min-h-[48px] touch-manipulation ${
+              !viewingCurrentWeek 
+                ? 'bg-primary text-white shadow-sm' 
+                : 'text-tertiary hover:text-foreground hover:bg-muted/30'
+            }`}
+          >
+            <div className="text-center">
+              <div className="font-semibold">Next Week</div>
+              <div className="text-xs opacity-80">
+                {getWeekRange(nextWeekId)}
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Week-specific columns */}
+      <div className="kanban-columns">
         {/* Week days */}
         {dayNames.map((day) => (
           <TaskColumn
