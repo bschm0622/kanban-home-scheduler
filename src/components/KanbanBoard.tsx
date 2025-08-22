@@ -6,6 +6,7 @@ import type { Task, TaskStatus } from "../types";
 import { useUser, UserButton } from "@clerk/clerk-react";
 import TaskForm from "./TaskForm";
 import TaskEditModal from "./TaskEditModal";
+import TaskScheduleModal from "./TaskScheduleModal";
 import RecurringTasksModal from "./RecurringTasksModal";
 import HistoryModal from "./HistoryModal";
 import TaskColumn from "./TaskColumn";
@@ -16,8 +17,41 @@ const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "frida
 export default function KanbanBoard() {
   const { user } = useUser();
   useAppVisitTracker(); // Track app visits for PWA prompt logic
-  const data = useQuery(api.tasks.getCurrentWeekTasks);
+  
+  // Week view state - true for current week, false for next week
+  const [viewingCurrentWeek, setViewingCurrentWeek] = useState(true);
+  
+  // Calculate current and next week IDs
+  const getCurrentWeekId = () => {
+    const now = new Date();
+    const sunday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const diff = sunday.getDate() - day; // Days to subtract to get to Sunday
+    sunday.setDate(diff);
+    return sunday.toISOString().split('T')[0];
+  };
+
+  const getNextWeekId = () => {
+    const now = new Date();
+    const sunday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const day = now.getDay();
+    const diff = sunday.getDate() - day + 7; // Add 7 days for next week
+    sunday.setDate(diff);
+    return sunday.toISOString().split('T')[0];
+  };
+
+  const currentWeekId = getCurrentWeekId();
+  const nextWeekId = getNextWeekId();
+  const viewingWeekId = viewingCurrentWeek ? currentWeekId : nextWeekId;
+
+
+  // Fetch data for the appropriate week
+  const currentWeekData = useQuery(api.tasks.getCurrentWeekTasks);
+  const nextWeekData = useQuery(api.tasks.getWeekTasks, { weekId: nextWeekId });
+  const data = viewingCurrentWeek ? currentWeekData : nextWeekData;
+
   const updateTaskStatus = useMutation(api.tasks.updateTaskStatus);
+  const scheduleTaskToWeek = useMutation(api.tasks.scheduleTaskToWeek);
   const updateTask = useMutation(api.tasks.updateTask);
   const completeTask = useMutation(api.tasks.completeTask);
   const deleteTask = useMutation(api.tasks.deleteTask);
@@ -26,6 +60,8 @@ export default function KanbanBoard() {
   const [showNewTask, setShowNewTask] = useState(false);
   const [showEditTask, setShowEditTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [showScheduleTask, setShowScheduleTask] = useState(false);
+  const [schedulingTask, setSchedulingTask] = useState<Task | null>(null);
   const [showRolloverConfirm, setShowRolloverConfirm] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -127,6 +163,30 @@ export default function KanbanBoard() {
     }
   };
 
+  const handleSchedule = (taskId: Id<"tasks">) => {
+    const task = [...data.backlogTasks, ...data.weekTasks].find(t => t._id === taskId);
+    if (task) {
+      setSchedulingTask(task);
+      setShowScheduleTask(true);
+    }
+  };
+
+  const handleScheduleConfirm = async (newStatus: TaskStatus, weekId: string) => {
+    if (schedulingTask) {
+      try {
+        await scheduleTaskToWeek({ 
+          taskId: schedulingTask._id, 
+          newStatus,
+          weekId: weekId || undefined
+        });
+        setShowScheduleTask(false);
+        setSchedulingTask(null);
+      } catch (error) {
+        console.error("Failed to schedule task:", error);
+      }
+    }
+  };
+
   const handleRolloverWeek = async () => {
     try {
       const result = await rolloverWeek();
@@ -163,13 +223,9 @@ export default function KanbanBoard() {
   const taskGroups = groupTasksByStatus();
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   
-  // Calculate week dates (Sunday-Saturday)
-  const getWeekDates = () => {
-    const now = new Date();
-    const sunday = new Date(now);
-    const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const diff = now.getDate() - day; // Days to subtract to get to Sunday
-    sunday.setDate(diff);
+  // Calculate week dates for the currently viewing week (Sunday-Saturday)
+  const getWeekDates = (weekId: string) => {
+    const sunday = new Date(weekId + 'T00:00:00'); // Parse the week ID as Sunday
     
     const dates: Record<string, string> = {};
     dayNames.forEach((dayName, index) => {
@@ -181,7 +237,7 @@ export default function KanbanBoard() {
     return dates;
   };
   
-  const weekDates = getWeekDates();
+  const weekDates = getWeekDates(viewingWeekId);
   const todayDate = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
     month: 'long', 
@@ -201,7 +257,31 @@ export default function KanbanBoard() {
               {todayDate}
             </p>
           </div>
+          
           <div className="flex items-center gap-3">
+            {/* Week Toggle */}
+            <div className="bg-muted/30 rounded-lg p-1 flex">
+              <button
+                onClick={() => setViewingCurrentWeek(true)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  viewingCurrentWeek 
+                    ? 'bg-primary text-white' 
+                    : 'text-tertiary hover:text-foreground'
+                }`}
+              >
+                This Week
+              </button>
+              <button
+                onClick={() => setViewingCurrentWeek(false)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  !viewingCurrentWeek 
+                    ? 'bg-primary text-white' 
+                    : 'text-tertiary hover:text-foreground'
+                }`}
+              >
+                Next Week
+              </button>
+            </div>
             <div dangerouslySetInnerHTML={{
               __html: `
                 <button
@@ -268,6 +348,7 @@ export default function KanbanBoard() {
           onComplete={handleComplete}
           onDelete={handleDelete}
           onEdit={handleEdit}
+          onSchedule={handleSchedule}
           isBacklog={true}
           collapsible={true}
           globalExpanded={globalExpanded}
@@ -284,6 +365,7 @@ export default function KanbanBoard() {
             onComplete={handleComplete}
             onDelete={handleDelete}
             onEdit={handleEdit}
+            onSchedule={handleSchedule}
             isToday={today === day}
             date={weekDates[day]}
             collapsible={true}
@@ -292,19 +374,22 @@ export default function KanbanBoard() {
           />
         ))}
 
-        {/* Completed */}
-        <TaskColumn
-          title="Done"
-          tasks={taskGroups.completed}
-          onStatusChange={handleStatusChange}
-          onComplete={handleComplete}
-          onDelete={handleDelete}
-          onEdit={handleEdit}
-          isCompleted={true}
-          collapsible={true}
-          globalExpanded={globalExpanded}
-          onExpandedChange={handleCompletedExpandedChange}
-        />
+        {/* Completed - only show for current week */}
+        {viewingCurrentWeek && (
+          <TaskColumn
+            title="Done"
+            tasks={taskGroups.completed}
+            onStatusChange={handleStatusChange}
+            onComplete={handleComplete}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
+            onSchedule={handleSchedule}
+            isCompleted={true}
+            collapsible={true}
+            globalExpanded={globalExpanded}
+            onExpandedChange={handleCompletedExpandedChange}
+          />
+        )}
       </div>
 
       {/* Bottom navigation */}
@@ -328,13 +413,15 @@ export default function KanbanBoard() {
             </svg>
             <span className="text-xs">History</span>
           </button>
-          <button 
-            onClick={() => setShowRolloverConfirm(true)}
-            className="nav-button secondary"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-250q78 0 134-56t56-134q0-78-56-134t-134-56q-38 0-71 14t-59 38v-62h-60v170h170v-60h-72q17-18 41-29t51-11q54 0 92 38t38 92q0 54-38 92t-92 38q-44 0-77-25.5T356-400h-62q14 65 65.5 107.5T480-250ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-446L526-800H240v640Zm0 0v-640 640Z" /></svg>
-            <span className="text-xs">Reset</span>
-          </button>
+          {viewingCurrentWeek && (
+            <button 
+              onClick={() => setShowRolloverConfirm(true)}
+              className="nav-button secondary"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-250q78 0 134-56t56-134q0-78-56-134t-134-56q-38 0-71 14t-59 38v-62h-60v170h170v-60h-72q17-18 41-29t51-11q54 0 92 38t38 92q0 54-38 92t-92 38q-44 0-77-25.5T356-400h-62q14 65 65.5 107.5T480-250ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-446L526-800H240v640Zm0 0v-640 640Z" /></svg>
+              <span className="text-xs">Reset</span>
+            </button>
+          )}
           <button 
             onClick={() => setShowNewTask(true)}
             className="nav-button primary"
@@ -346,7 +433,13 @@ export default function KanbanBoard() {
       </div>
 
       {/* Task creation modal */}
-      <TaskForm isOpen={showNewTask} onClose={() => setShowNewTask(false)} />
+      <TaskForm 
+        isOpen={showNewTask} 
+        onClose={() => setShowNewTask(false)}
+        currentWeekId={currentWeekId}
+        nextWeekId={nextWeekId}
+        viewingCurrentWeek={viewingCurrentWeek}
+      />
 
       {/* Task edit modal */}
       <TaskEditModal 
@@ -358,8 +451,27 @@ export default function KanbanBoard() {
         }} 
       />
 
+      {/* Task schedule modal */}
+      <TaskScheduleModal 
+        isOpen={showScheduleTask} 
+        currentStatus={schedulingTask?.status || "backlog"}
+        currentWeekId={currentWeekId}
+        nextWeekId={nextWeekId}
+        taskTitle={schedulingTask?.title}
+        onSchedule={handleScheduleConfirm}
+        onClose={() => {
+          setShowScheduleTask(false);
+          setSchedulingTask(null);
+        }} 
+      />
+
       {/* Recurring tasks modal */}
-      <RecurringTasksModal isOpen={showRecurring} onClose={() => setShowRecurring(false)} />
+      <RecurringTasksModal 
+        isOpen={showRecurring} 
+        onClose={() => setShowRecurring(false)}
+        currentWeekId={currentWeekId}
+        nextWeekId={nextWeekId}
+      />
 
       {/* History modal */}
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />

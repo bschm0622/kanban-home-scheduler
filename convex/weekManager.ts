@@ -1,13 +1,13 @@
 import { mutation } from "./_generated/server";
 
-// Get current week ID (Monday of current week in YYYY-MM-DD format)
+// Get current week ID (Sunday of current week in YYYY-MM-DD format)
 function getCurrentWeekId(): string {
   const now = new Date();
-  const monday = new Date(now);
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  monday.setDate(diff);
-  return monday.toISOString().split('T')[0];
+  const sunday = new Date(now);
+  const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const diff = now.getDate() - day; // Days to subtract to get to Sunday
+  sunday.setDate(diff);
+  return sunday.toISOString().split('T')[0];
 }
 
 // Auto-rollover any incomplete tasks from previous weeks
@@ -20,7 +20,12 @@ export const autoRolloverPreviousWeeks = mutation({
     
     const currentWeekId = getCurrentWeekId();
     
-    // Find all tasks for this user that have a weekId but it's not the current week and not completed
+    // Calculate next week ID to avoid rolling over future tasks
+    const nextWeekSunday = new Date(currentWeekId + 'T00:00:00');
+    nextWeekSunday.setDate(nextWeekSunday.getDate() + 7);
+    const nextWeekId = nextWeekSunday.toISOString().split('T')[0];
+    
+    // Find all tasks for this user that have a weekId from PAST weeks (not current or future weeks) and not completed
     const orphanedTasks = await ctx.db
       .query("tasks")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
@@ -28,6 +33,8 @@ export const autoRolloverPreviousWeeks = mutation({
         q.and(
           q.neq(q.field("weekId"), undefined),
           q.neq(q.field("weekId"), currentWeekId),
+          q.neq(q.field("weekId"), nextWeekId),
+          q.lt(q.field("weekId"), currentWeekId), // Only past weeks
           q.neq(q.field("status"), "completed")
         )
       )
@@ -43,7 +50,7 @@ export const autoRolloverPreviousWeeks = mutation({
       movedCount++;
     }
     
-    // Also check if we need to create a week record for any orphaned completed tasks
+    // Also check if we need to create a week record for any orphaned completed tasks (only past weeks)
     const orphanedCompletedTasks = await ctx.db
       .query("tasks")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
@@ -51,6 +58,8 @@ export const autoRolloverPreviousWeeks = mutation({
         q.and(
           q.neq(q.field("weekId"), undefined),
           q.neq(q.field("weekId"), currentWeekId),
+          q.neq(q.field("weekId"), nextWeekId),
+          q.lt(q.field("weekId"), currentWeekId), // Only past weeks
           q.eq(q.field("status"), "completed")
         )
       )

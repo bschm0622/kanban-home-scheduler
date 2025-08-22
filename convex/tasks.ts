@@ -165,6 +165,53 @@ export const updateTaskStatus = mutation({
   },
 });
 
+// Update task status to a specific week (for scheduling)
+export const scheduleTaskToWeek = mutation({
+  args: {
+    taskId: v.id("tasks"),
+    newStatus: v.union(
+      v.literal("backlog"),
+      v.literal("sunday"),
+      v.literal("monday"),
+      v.literal("tuesday"), 
+      v.literal("wednesday"),
+      v.literal("thursday"),
+      v.literal("friday"),
+      v.literal("saturday"),
+      v.literal("completed")
+    ),
+    weekId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    // Verify user owns this task
+    const task = await ctx.db.get(args.taskId);
+    if (!task || task.userId !== identity.subject) {
+      throw new Error("Task not found or access denied");
+    }
+    
+    const updateData: any = {
+      status: args.newStatus,
+    };
+    
+    // Set weekId based on status and provided weekId
+    if (args.newStatus === "backlog") {
+      updateData.weekId = undefined;
+    } else if (args.newStatus === "completed") {
+      updateData.completedAt = Date.now();
+      updateData.weekId = args.weekId || getCurrentWeekId();
+    } else {
+      updateData.weekId = args.weekId || getCurrentWeekId();
+    }
+    
+    return await ctx.db.patch(args.taskId, updateData);
+  },
+});
+
 // Complete a task
 export const completeTask = mutation({
   args: {

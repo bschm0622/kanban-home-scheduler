@@ -6,32 +6,49 @@ import type { TaskStatus } from "../types";
 interface TaskFormProps {
   isOpen: boolean;
   onClose: () => void;
+  currentWeekId: string;
+  nextWeekId: string;
+  viewingCurrentWeek: boolean;
 }
 
-export default function TaskForm({ isOpen, onClose }: TaskFormProps) {
+export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, viewingCurrentWeek }: TaskFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [status, setStatus] = useState<Exclude<TaskStatus, "completed">>("backlog");
+  const [targetWeek, setTargetWeek] = useState<"current" | "next">(viewingCurrentWeek ? "current" : "next");
   
   const createTask = useMutation(api.tasks.createTask);
+  const scheduleTaskToWeek = useMutation(api.tasks.scheduleTaskToWeek);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
     try {
-      await createTask({
+      // Create the task first
+      const taskId = await createTask({
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
-        status,
+        status: "backlog", // Always create in backlog first
       });
+      
+      // If it's not backlog, schedule it to the appropriate week
+      if (status !== "backlog") {
+        const weekId = targetWeek === "current" ? currentWeekId : nextWeekId;
+        await scheduleTaskToWeek({
+          taskId,
+          newStatus: status,
+          weekId: weekId,
+        });
+      }
       
       setTitle("");
       setDescription("");
       setPriority("medium");
       setStatus("backlog");
+      setTargetWeek(viewingCurrentWeek ? "current" : "next");
       onClose();
     } catch (error) {
       console.error("Failed to create task:", error);
@@ -114,6 +131,36 @@ export default function TaskForm({ isOpen, onClose }: TaskFormProps) {
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
+              Week
+            </label>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {[
+                { value: "current", label: "This Week" },
+                { value: "next", label: "Next Week" }
+              ].map(({ value, label }) => (
+                <label key={value} className="cursor-pointer">
+                  <input
+                    type="radio"
+                    name="week"
+                    value={value}
+                    checked={targetWeek === value}
+                    onChange={(e) => setTargetWeek(e.target.value as "current" | "next")}
+                    className="sr-only"
+                  />
+                  <div className={`p-3 border-2 rounded-lg text-center text-sm font-medium ${
+                    targetWeek === value 
+                      ? "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-200" 
+                      : "bg-secondary border-muted text-tertiary"
+                  }`}>
+                    {label}
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
               Assign to
             </label>
             <select
@@ -122,13 +169,13 @@ export default function TaskForm({ isOpen, onClose }: TaskFormProps) {
               className="w-full p-3 border border-muted rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-base bg-surface text-foreground"
             >
               <option value="backlog">Backlog</option>
+              <option value="sunday">Sunday</option>
               <option value="monday">Monday</option>
               <option value="tuesday">Tuesday</option>
               <option value="wednesday">Wednesday</option>
               <option value="thursday">Thursday</option>
               <option value="friday">Friday</option>
               <option value="saturday">Saturday</option>
-              <option value="sunday">Sunday</option>
             </select>
           </div>
 

@@ -9,9 +9,11 @@ import RecurringTaskEditModal from "./RecurringTaskEditModal";
 interface RecurringTasksModalProps {
   isOpen: boolean;
   onClose: () => void;
+  currentWeekId: string;
+  nextWeekId: string;
 }
 
-export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksModalProps) {
+export default function RecurringTasksModal({ isOpen, onClose, currentWeekId, nextWeekId }: RecurringTasksModalProps) {
   const recurringTasks = useQuery(api.recurringTasks.getRecurringTasks);
   const createRecurringTask = useMutation(api.recurringTasks.createRecurringTask);
   const deleteRecurringTask = useMutation(api.recurringTasks.deleteRecurringTask);
@@ -56,24 +58,28 @@ export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksM
     }
   };
 
-  const handleGenerate = async () => {
+
+  const handleBulkGenerate = async (week: "current" | "next") => {
     try {
       const taskIds = Array.from(selectedTasks);
       const selectedCount = taskIds.length;
-      const result = await generateRecurringTasks({ taskIds });
+      const targetWeekId = week === "current" ? currentWeekId : nextWeekId;
+      const weekLabel = week === "current" ? "this week" : "next week";
+      
+      const result = await generateRecurringTasks({ taskIds, weekId: targetWeekId });
       
       // Show appropriate message based on results
       if (result.generatedCount === 0) {
         if (selectedCount === 1) {
-          setGenerateResult("That task has already been generated for this week");
+          setGenerateResult(`That task has already been generated for ${weekLabel}`);
         } else {
-          setGenerateResult("Those tasks have already been generated for this week");
+          setGenerateResult(`Those tasks have already been generated for ${weekLabel}`);
         }
       } else if (result.generatedCount === selectedCount) {
-        setGenerateResult(`Generated ${result.generatedCount} new task${result.generatedCount === 1 ? '' : 's'} for this week!`);
+        setGenerateResult(`Generated ${result.generatedCount} new task${result.generatedCount === 1 ? '' : 's'} for ${weekLabel}!`);
       } else {
         const alreadyGenerated = selectedCount - result.generatedCount;
-        setGenerateResult(`Generated ${result.generatedCount} new task${result.generatedCount === 1 ? '' : 's'}. ${alreadyGenerated} task${alreadyGenerated === 1 ? ' was' : 's were'} already generated this week.`);
+        setGenerateResult(`Generated ${result.generatedCount} new task${result.generatedCount === 1 ? '' : 's'}. ${alreadyGenerated} task${alreadyGenerated === 1 ? ' was' : 's were'} already generated for ${weekLabel}.`);
       }
       
       setSelectedTasks(new Set());
@@ -95,7 +101,7 @@ export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksM
             <h2 className="text-lg font-semibold text-foreground">Recurring Tasks</h2>
             <button
               onClick={onClose}
-              className="text-tertiary hover:text-foreground text-xl leading-none"
+              className="text-tertiary hover:text-foreground text-2xl leading-none"
             >
               ×
             </button>
@@ -110,11 +116,11 @@ export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksM
             </div>
           )}
 
-          {/* Select all / Generate section */}
-          <div className="mb-4 space-y-2">
-            {recurringTasks && recurringTasks.length > 0 && (
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-tertiary cursor-pointer">
+          {/* Bulk generation section */}
+          {recurringTasks && recurringTasks.length > 0 && (
+            <div className="mb-4 p-3 bg-muted/20 rounded-lg border border-muted/30">
+              <div className="flex items-center justify-between mb-3">
+                <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedTasks.size === recurringTasks.length && recurringTasks.length > 0}
@@ -133,93 +139,87 @@ export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksM
                   {selectedTasks.size} of {recurringTasks.length} selected
                 </span>
               </div>
-            )}
-            
-            <button
-              onClick={handleGenerate}
-              disabled={selectedTasks.size === 0}
-              className={`w-full p-3 rounded-lg font-medium touch-manipulation transition-colors border ${
-                selectedTasks.size > 0 
-                  ? "bg-primary text-white hover:opacity-90 border-primary"
-                  : "bg-muted/30 text-tertiary border-muted/50 cursor-not-allowed"
-              }`}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor">
-                  <path d="M280-80 120-240l160-160 56 58-62 62h406v-160h80v240H274l62 62-56 58Zm-80-440v-240h486l-62-62 56-58 160 160-160 160-56-58 62-62H280v160h-80Z"/>
-                </svg>
-                {selectedTasks.size > 0 
-                  ? `Generate ${selectedTasks.size} Task${selectedTasks.size === 1 ? '' : 's'}`
-                  : "Select Tasks to Generate"
-                }
-              </div>
-            </button>
-          </div>
+              
+              {selectedTasks.size > 0 && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleBulkGenerate("current")}
+                    className="flex-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity min-h-[40px]"
+                  >
+                    Generate for This Week ({selectedTasks.size})
+                  </button>
+                  <button
+                    onClick={() => handleBulkGenerate("next")}
+                    className="flex-1 px-3 py-2 border border-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted/30 transition-colors min-h-[40px]"
+                  >
+                    Generate for Next Week ({selectedTasks.size})
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Recurring tasks list */}
-          <div className="space-y-2 mb-4">
+          <div className="space-y-3">
             {recurringTasks?.map((task) => (
               <div
                 key={task._id}
-                className={`task-card priority-${task.priority}`}
+                className="bg-surface border border-muted rounded-lg p-4"
               >
-                <div className="task-content">
-                  <div className="flex items-start gap-3">
-                    {/* Selection checkbox */}
-                    <input
-                      type="checkbox"
-                      checked={selectedTasks.has(task._id)}
-                      onChange={(e) => {
-                        const newSelected = new Set(selectedTasks);
-                        if (e.target.checked) {
-                          newSelected.add(task._id);
-                        } else {
-                          newSelected.delete(task._id);
-                        }
-                        setSelectedTasks(newSelected);
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedTasks.has(task._id)}
+                    onChange={(e) => {
+                      const newSelected = new Set(selectedTasks);
+                      if (e.target.checked) {
+                        newSelected.add(task._id);
+                      } else {
+                        newSelected.delete(task._id);
+                      }
+                      setSelectedTasks(newSelected);
+                    }}
+                    className="w-4 h-4 mt-0.5 rounded border-muted text-primary focus:ring-primary"
+                  />
+                  
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-foreground text-sm">{task.title}</h3>
+                    {task.description && (
+                      <p className="text-xs text-tertiary mt-1">{task.description}</p>
+                    )}
+                    {task.preferredDay && (
+                      <div className="mt-1 text-xs text-tertiary">
+                        Preferred: {task.preferredDay.charAt(0).toUpperCase() + task.preferredDay.slice(1)}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingTask(task);
+                        setShowEditModal(true);
                       }}
-                      className="w-4 h-4 mt-1 rounded border-muted text-primary focus:ring-primary"
-                    />
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-foreground text-sm">{task.title}</h3>
-                      {task.description && (
-                        <p className="text-xs text-tertiary mt-1">{task.description}</p>
-                      )}
-                      {task.preferredDay && (
-                        <div className="mt-2 text-xs text-tertiary">
-                          Preferred: {task.preferredDay}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex gap-2 ml-2">
-                      <button
-                        onClick={() => {
-                          setEditingTask(task);
-                          setShowEditModal(true);
-                        }}
-                        className="px-3 py-2 rounded-md text-xs font-medium touch-manipulation transition-colors bg-muted/50 text-tertiary hover:bg-muted min-h-[40px] flex items-center justify-center"
-                        title="Edit task"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor">
-                          <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Delete "${task.title}"? This cannot be undone.`)) {
-                            deleteRecurringTask({ taskId: task._id });
-                          }
-                        }}
-                        className="px-3 py-2 rounded-md text-xs font-medium touch-manipulation transition-colors bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 min-h-[40px] flex items-center justify-center"
-                        title="Delete task"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor">
-                          <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
-                        </svg>
-                      </button>
-                    </div>
+                      className="p-2 rounded-md text-tertiary hover:text-foreground hover:bg-muted/50 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+                      title="Edit task"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor">
+                        <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete "${task.title}"? This cannot be undone.`)) {
+                          deleteRecurringTask({ taskId: task._id });
+                        }
+                      }}
+                      className="p-2 rounded-md text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+                      title="Delete task"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor">
+                        <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -227,18 +227,17 @@ export default function RecurringTasksModal({ isOpen, onClose }: RecurringTasksM
             
             {(!recurringTasks || recurringTasks.length === 0) && (
               <div className="text-center py-8 text-tertiary text-sm">
-                No recurring tasks yet
+                No recurring tasks yet. Create your first one below.
               </div>
             )}
           </div>
-
         </div>
 
         {/* Footer */}
         <div className="p-4 border-t border-muted flex-shrink-0" style={{paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0px))`}}>
           <button
             onClick={() => setShowAddModal(true)}
-            className="w-full px-4 py-4 bg-muted/30 text-foreground rounded-lg font-medium hover:bg-muted/50 touch-manipulation transition-colors border border-muted/50 min-h-[48px]"
+            className="w-full px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 touch-manipulation transition-opacity min-h-[48px]"
           >
             + Add Recurring Task
           </button>
