@@ -74,7 +74,7 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
       setSelectedOption({ value: "backlog", weekId: "" });
       onClose();
     } catch (error) {
-      console.error("Failed to create task:", error);
+      // Task creation failed - form will remain open for retry
     }
   };
 

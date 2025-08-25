@@ -38,7 +38,7 @@ export default function TaskEditModal({ isOpen, task, onClose }: TaskEditModalPr
       
       onClose();
     } catch (error) {
-      console.error("Failed to update task:", error);
+      // Task update failed - modal will remain open for retry
     }
   };
 

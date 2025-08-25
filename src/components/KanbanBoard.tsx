@@ -108,12 +108,8 @@ export default function KanbanBoard() {
   // Auto-rollover previous weeks on app load
   useEffect(() => {
     if (data) {
-      autoRollover().then((result) => {
-        if (result && result.movedTasksCount > 0) {
-          console.log(`Auto-rolled over ${result.movedTasksCount} tasks from previous weeks`);
-        }
-      }).catch((error) => {
-        console.error("Auto-rollover failed:", error);
+      autoRollover().catch(() => {
+        // Silent failure - auto-rollover is non-critical
       });
     }
   }, [data, autoRollover]);
@@ -168,23 +164,20 @@ export default function KanbanBoard() {
         setShowScheduleTask(false);
         setSchedulingTask(null);
       } catch (error) {
-        console.error("Failed to schedule task:", error);
+        // Task scheduling failed - user will see stale UI state
       }
     }
   };
 
   const handleRolloverWeek = async () => {
     try {
-      const result = await resetWeek({ 
+      await resetWeek({ 
         weekId: viewingWeekId 
       });
       setShowRolloverConfirm(false);
-      // You could show a toast notification here
-      if (result.movedTasks > 0) {
-        console.log(`Moved ${result.movedTasks} incomplete tasks back to backlog`);
-      }
+      // Week reset successful - UI will update automatically
     } catch (error) {
-      console.error("Failed to reset week:", error);
+      // Week reset failed - user will see stale UI state
     }
   };
 

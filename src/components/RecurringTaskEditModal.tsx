@@ -45,7 +45,7 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
       
       onClose();
     } catch (error) {
-      console.error("Failed to update recurring task:", error);
+      // Recurring task update failed - modal will remain open for retry
     }
   };
 

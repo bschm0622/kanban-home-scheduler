@@ -54,7 +54,7 @@ export default function RecurringTasksModal({ isOpen, onClose, currentWeekId, ne
       });
       setShowAddModal(false);
     } catch (error) {
-      console.error("Failed to create recurring task:", error);
+      // Recurring task creation failed - modal will remain open for retry
     }
   };
 
@@ -87,7 +87,7 @@ export default function RecurringTasksModal({ isOpen, onClose, currentWeekId, ne
       // Clear message after 4 seconds
       setTimeout(() => setGenerateResult(null), 4000);
     } catch (error) {
-      console.error("Failed to generate recurring tasks:", error);
+      // Recurring task generation failed - user will see error message
       setGenerateResult("Failed to generate tasks. Please try again.");
       setTimeout(() => setGenerateResult(null), 4000);
     }
