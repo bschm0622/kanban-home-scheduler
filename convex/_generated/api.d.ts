@@ -16,6 +16,7 @@ import type {
 import type * as history from "../history.js";
 import type * as recurringTasks from "../recurringTasks.js";
 import type * as tasks from "../tasks.js";
+import type * as userSettings from "../userSettings.js";
 import type * as weekManager from "../weekManager.js";
 
 /**
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   history: typeof history;
   recurringTasks: typeof recurringTasks;
   tasks: typeof tasks;
+  userSettings: typeof userSettings;
   weekManager: typeof weekManager;
 }>;
 export declare const api: FilterApi<

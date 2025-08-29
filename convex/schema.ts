@@ -60,4 +60,12 @@ export default defineSchema({
     .index("by_week_id", ["weekId"])
     .index("by_user", ["userId"])
     .index("by_user_and_week", ["userId", "weekId"]),
+
+  userSettings: defineTable({
+    userId: v.string(), // Clerk user ID
+    lastBacklogReviewWeekId: v.optional(v.string()), // Last week user reviewed backlog
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"]),
 });

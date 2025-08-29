@@ -352,3 +352,22 @@ export const resetWeek = mutation({
     return { movedTasks: incompleteTasks.length };
   },
 });
+
+// Get the oldest backlog tasks for weekly review
+export const getOldestBacklogTasks = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    // Get up to 5 oldest backlog tasks for this user
+    const oldestTasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_user_and_status", (q) => q.eq("userId", identity.subject).eq("status", "backlog"))
+      .order("asc")
+      .take(5);
+    
+    return oldestTasks;
+  },
+});

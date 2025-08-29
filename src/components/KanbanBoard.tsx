@@ -11,6 +11,7 @@ import TaskEditModal from "./TaskEditModal";
 import TaskScheduleModal from "./TaskScheduleModal";
 import RecurringTasksModal from "./RecurringTasksModal";
 import HistoryModal from "./HistoryModal";
+import BacklogReviewModal from "./BacklogReviewModal";
 import TaskColumn from "./TaskColumn";
 import PWAInstallPrompt, { useAppVisitTracker } from "./PWAInstallPrompt";
 import AppHeader from "./AppHeader";
@@ -35,6 +36,9 @@ export default function KanbanBoard() {
   const currentWeekData = useQuery(api.tasks.getCurrentWeekTasks);
   const nextWeekData = useQuery(api.tasks.getWeekTasks, { weekId: nextWeekId });
   const data = viewingCurrentWeek ? currentWeekData : nextWeekData;
+  
+  // Check if user needs backlog review
+  const shouldShowBacklogReview = useQuery(api.userSettings.shouldShowBacklogReview);
 
   const updateTaskStatus = useMutation(api.tasks.updateTaskStatus);
   const scheduleTaskToWeek = useMutation(api.tasks.scheduleTaskToWeek);
@@ -51,6 +55,7 @@ export default function KanbanBoard() {
   const [showRolloverConfirm, setShowRolloverConfirm] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showBacklogReview, setShowBacklogReview] = useState(false);
   const [globalExpanded, setGlobalExpanded] = useState<boolean | null>(null);
   const [columnStates, setColumnStates] = useState<Record<string, boolean>>({});
 
@@ -113,6 +118,16 @@ export default function KanbanBoard() {
       });
     }
   }, [data, autoRollover]);
+  
+  // Show backlog review modal if needed
+  useEffect(() => {
+    if (shouldShowBacklogReview === true && data) {
+      const timer = setTimeout(() => {
+        setShowBacklogReview(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldShowBacklogReview, data]);
 
   if (!data) {
     return (
@@ -392,6 +407,14 @@ export default function KanbanBoard() {
 
       {/* History modal */}
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
+
+      {/* Backlog review modal */}
+      <BacklogReviewModal 
+        isOpen={showBacklogReview} 
+        onClose={() => setShowBacklogReview(false)}
+        currentWeekId={currentWeekId}
+        nextWeekId={nextWeekId}
+      />
 
       {/* Week rollover confirmation modal */}
       {showRolloverConfirm && (
