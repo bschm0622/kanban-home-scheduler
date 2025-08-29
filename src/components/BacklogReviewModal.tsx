@@ -229,10 +229,10 @@ export default function BacklogReviewModal({ isOpen, onClose, currentWeekId, nex
                                 handleDeleteTask(task._id);
                               }
                             }}
-                            className="w-5 h-5 rounded border-2 border-muted hover:border-red-500 flex items-center justify-center text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            className="w-8 h-8 rounded border-2 border-muted hover:border-red-500 flex items-center justify-center text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             title="Delete task"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" height="12px" viewBox="0 -960 960 960" width="12px" fill="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor">
                               <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
                             </svg>
                           </button>
@@ -253,7 +253,7 @@ export default function BacklogReviewModal({ isOpen, onClose, currentWeekId, nex
                                   e.stopPropagation();
                                   handleScheduleTask(task._id, currentWeekId, option.value);
                                 }}
-                                className="p-2 rounded-md border transition-colors touch-manipulation min-h-[44px] text-center border-muted text-foreground hover:border-primary/50 hover:bg-primary/5"
+                                className="p-3 rounded-md border transition-colors touch-manipulation min-h-[48px] text-center border-muted text-foreground hover:border-primary/50 hover:bg-primary/5"
                               >
                                 <div className="text-xs font-medium">{option.value.charAt(0).toUpperCase()}</div>
                                 <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
@@ -273,7 +273,7 @@ export default function BacklogReviewModal({ isOpen, onClose, currentWeekId, nex
                                   e.stopPropagation();
                                   handleScheduleTask(task._id, nextWeekId, option.value);
                                 }}
-                                className="p-2 rounded-md border transition-colors touch-manipulation min-h-[44px] text-center border-muted text-foreground hover:border-primary/50 hover:bg-primary/5"
+                                className="p-3 rounded-md border transition-colors touch-manipulation min-h-[48px] text-center border-muted text-foreground hover:border-primary/50 hover:bg-primary/5"
                               >
                                 <div className="text-xs font-medium">{option.value.charAt(0).toUpperCase()}</div>
                                 <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
@@ -289,7 +289,7 @@ export default function BacklogReviewModal({ isOpen, onClose, currentWeekId, nex
                               e.stopPropagation();
                               handleSkipTask(task._id);
                             }}
-                            className="w-full p-2 rounded-lg border text-center transition-colors touch-manipulation min-h-[44px] relative border-muted text-foreground hover:border-primary/50 hover:bg-primary/5"
+                            className="w-full p-3 rounded-lg border text-center transition-colors touch-manipulation min-h-[48px] relative border-muted text-foreground hover:border-primary/50 hover:bg-primary/5"
                           >
                             <div className="font-medium">Backlog</div>
                             <div className="text-xs opacity-70">Keep unscheduled</div>

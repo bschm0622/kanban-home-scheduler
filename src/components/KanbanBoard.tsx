@@ -39,6 +39,7 @@ export default function KanbanBoard() {
   
   // Check if user needs backlog review
   const shouldShowBacklogReview = useQuery(api.userSettings.shouldShowBacklogReview);
+  const oldestBacklogTasks = useQuery(api.tasks.getOldestBacklogTasks);
 
   const updateTaskStatus = useMutation(api.tasks.updateTaskStatus);
   const scheduleTaskToWeek = useMutation(api.tasks.scheduleTaskToWeek);
@@ -121,13 +122,13 @@ export default function KanbanBoard() {
   
   // Show backlog review modal if needed
   useEffect(() => {
-    if (shouldShowBacklogReview === true && data) {
+    if (shouldShowBacklogReview === true && data && oldestBacklogTasks && oldestBacklogTasks.length > 0) {
       const timer = setTimeout(() => {
         setShowBacklogReview(true);
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [shouldShowBacklogReview, data]);
+  }, [shouldShowBacklogReview, data, oldestBacklogTasks]);
 
   if (!data) {
     return (
