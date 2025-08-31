@@ -22,7 +22,7 @@ export function getNextWeekId(): string {
 
 // Calculate dates for a specific week
 export function getWeekDates(weekId: string) {
-  const sunday = new Date(weekId + 'T00:00:00'); // Parse the week ID as Sunday
+  const sunday = new Date(weekId); // Parse the week ID as Sunday in local timezone
   
   const dates: Record<string, string> = {};
   const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
@@ -38,7 +38,7 @@ export function getWeekDates(weekId: string) {
 
 // Helper to get a clean week range display (Sun - Sat)
 export function getWeekRange(weekId: string): string {
-  const sunday = new Date(weekId + 'T00:00:00');
+  const sunday = new Date(weekId);
   const saturday = new Date(sunday);
   saturday.setDate(sunday.getDate() + 6);
   

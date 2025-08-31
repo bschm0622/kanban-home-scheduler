@@ -41,7 +41,7 @@ export default function TaskScheduleModal({
 
   // Calculate dates for a specific week
   const getWeekDates = (weekId: string) => {
-    const sunday = new Date(weekId + 'T00:00:00');
+    const sunday = new Date(weekId);
     
     const dates: Array<{value: TaskStatus, label: string, weekId: string}> = [
       { value: "backlog", label: "Backlog", weekId: "" }

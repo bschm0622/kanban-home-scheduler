@@ -22,7 +22,7 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
 
   // Calculate dates for a specific week
   const getWeekDates = (weekId: string) => {
-    const sunday = new Date(weekId + 'T00:00:00');
+    const sunday = new Date(weekId);
     
     const dates: Array<{value: TaskStatus, label: string, weekId: string}> = [];
     

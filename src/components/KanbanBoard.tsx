@@ -32,8 +32,8 @@ export default function KanbanBoard() {
   const viewingWeekId = viewingCurrentWeek ? currentWeekId : nextWeekId;
 
 
-  // Fetch data for the appropriate week
-  const currentWeekData = useQuery(api.tasks.getCurrentWeekTasks);
+  // Fetch data for the appropriate week - use explicit week IDs for consistency
+  const currentWeekData = useQuery(api.tasks.getWeekTasks, { weekId: currentWeekId });
   const nextWeekData = useQuery(api.tasks.getWeekTasks, { weekId: nextWeekId });
   const data = viewingCurrentWeek ? currentWeekData : nextWeekData;
   

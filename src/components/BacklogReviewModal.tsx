@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import type { Task } from "../types";
+import type { Task, TaskStatus } from "../types";
 
 interface BacklogReviewModalProps {
   isOpen: boolean;
@@ -54,7 +54,7 @@ export default function BacklogReviewModal({ isOpen, onClose, currentWeekId, nex
 
   // Calculate dates for a specific week (same as TaskForm)
   const getWeekDates = (weekId: string) => {
-    const sunday = new Date(weekId + 'T00:00:00');
+    const sunday = new Date(weekId);
     
     const dates: Array<{value: TaskStatus, label: string, weekId: string}> = [];
     
