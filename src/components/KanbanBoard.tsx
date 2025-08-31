@@ -37,6 +37,7 @@ export default function KanbanBoard() {
   const nextWeekData = useQuery(api.tasks.getWeekTasks, { weekId: nextWeekId });
   const data = viewingCurrentWeek ? currentWeekData : nextWeekData;
   
+  
   // Check if user needs backlog review
   const shouldShowBacklogReview = useQuery(api.userSettings.shouldShowBacklogReview);
   const oldestBacklogTasks = useQuery(api.tasks.getOldestBacklogTasks);

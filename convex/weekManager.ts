@@ -3,9 +3,9 @@ import { mutation } from "./_generated/server";
 // Get current week ID (Sunday of current week in YYYY-MM-DD format)
 function getCurrentWeekId(): string {
   const now = new Date();
-  const sunday = new Date(now);
+  const sunday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-  const diff = now.getDate() - day; // Days to subtract to get to Sunday
+  const diff = sunday.getDate() - day; // Days to subtract to get to Sunday
   sunday.setDate(diff);
   return sunday.toISOString().split('T')[0];
 }
@@ -21,7 +21,7 @@ export const autoRolloverPreviousWeeks = mutation({
     const currentWeekId = getCurrentWeekId();
     
     // Calculate next week ID to avoid rolling over future tasks
-    const nextWeekSunday = new Date(currentWeekId + 'T00:00:00');
+    const nextWeekSunday = new Date(currentWeekId);
     nextWeekSunday.setDate(nextWeekSunday.getDate() + 7);
     const nextWeekId = nextWeekSunday.toISOString().split('T')[0];
     
