@@ -32,6 +32,12 @@ export default function TaskScheduleModal({
 
   const [selectedOption, setSelectedOption] = useState<{value: TaskStatus, weekId: string} | null>(getInitialSelection());
 
+  // Get today's date in user's local timezone for comparison
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth();
+  const todayDay = today.getDate();
+
   // Reset selection when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -143,23 +149,40 @@ export default function TaskScheduleModal({
           <div>
             <h3 className="text-sm font-medium text-foreground mb-2">This Week</h3>
             <div className="grid grid-cols-7 gap-1">
-              {currentWeekOptions.slice(1).map((option) => (
-                <button
-                  key={`current-${option.value}`}
-                  onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
-                  className={`p-2 rounded-md border transition-colors touch-manipulation min-h-[44px] text-center ${
-                    selectedOption?.value === option.value && selectedOption?.weekId === option.weekId
-                      ? 'border-primary bg-primary/10 text-primary' 
-                      : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
-                  }`}
-                >
-                  <div className="text-xs font-medium flex items-center justify-center gap-0.5">
-                    {option.value.charAt(0).toUpperCase()}
-                    {currentStatus === option.value && currentTaskWeekId === option.weekId && <span className="text-xs">•</span>}
-                  </div>
-                  <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
-                </button>
-              ))}
+              {currentWeekOptions.slice(1).map((option) => {
+                // Parse weekId as local date (not UTC)
+                const [year, month, day] = option.weekId.split('-').map(Number);
+                const sunday = new Date(year, month - 1, day); // month is 0-indexed
+                const dayIndex = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(option.value);
+                const optionDate = new Date(sunday);
+                optionDate.setDate(sunday.getDate() + dayIndex);
+                
+                const isToday = optionDate.getFullYear() === todayYear && 
+                               optionDate.getMonth() === todayMonth && 
+                               optionDate.getDate() === todayDay;
+                const isSelected = selectedOption?.value === option.value && selectedOption?.weekId === option.weekId;
+                const isCurrentlyScheduled = currentStatus === option.value && currentTaskWeekId === option.weekId;
+                
+                return (
+                  <button
+                    key={`current-${option.value}`}
+                    onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
+                    className={`p-2 rounded-md transition-colors touch-manipulation min-h-[44px] text-center ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-primary' 
+                        : isToday
+                        ? 'border-blue-500 border-2 text-foreground hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
+                    }`}
+                  >
+                    <div className="text-xs font-medium flex items-center justify-center gap-0.5">
+                      {option.value.charAt(0).toUpperCase()}
+                      {isCurrentlyScheduled && <span className="text-xs">•</span>}
+                    </div>
+                    <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -167,23 +190,39 @@ export default function TaskScheduleModal({
           <div>
             <h3 className="text-sm font-medium text-foreground mb-2">Next Week</h3>
             <div className="grid grid-cols-7 gap-1">
-              {nextWeekOptions.slice(1).map((option) => (
-                <button
-                  key={`next-${option.value}`}
-                  onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
-                  className={`p-2 rounded-md border transition-colors touch-manipulation min-h-[44px] text-center ${
-                    selectedOption?.value === option.value && selectedOption?.weekId === option.weekId
-                      ? 'border-primary bg-primary/10 text-primary' 
-                      : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
-                  }`}
-                >
-                  <div className="text-xs font-medium flex items-center justify-center gap-0.5">
-                    {option.value.charAt(0).toUpperCase()}
-                    {currentStatus === option.value && currentTaskWeekId === option.weekId && <span className="text-xs">•</span>}
-                  </div>
-                  <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
-                </button>
-              ))}
+              {nextWeekOptions.slice(1).map((option) => {
+                // Parse weekId as local date (not UTC)
+                const [year, month, day] = option.weekId.split('-').map(Number);
+                const sunday = new Date(year, month - 1, day); // month is 0-indexed
+                const dayIndex = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(option.value);
+                const optionDate = new Date(sunday);
+                optionDate.setDate(sunday.getDate() + dayIndex);
+                const isToday = optionDate.getFullYear() === todayYear && 
+                               optionDate.getMonth() === todayMonth && 
+                               optionDate.getDate() === todayDay;
+                const isSelected = selectedOption?.value === option.value && selectedOption?.weekId === option.weekId;
+                const isCurrentlyScheduled = currentStatus === option.value && currentTaskWeekId === option.weekId;
+                
+                return (
+                  <button
+                    key={`next-${option.value}`}
+                    onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
+                    className={`p-2 rounded-md transition-colors touch-manipulation min-h-[44px] text-center ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-primary' 
+                        : isToday
+                        ? 'border-blue-500 border-2 text-foreground hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
+                    }`}
+                  >
+                    <div className="text-xs font-medium flex items-center justify-center gap-0.5">
+                      {option.value.charAt(0).toUpperCase()}
+                      {isCurrentlyScheduled && <span className="text-xs">•</span>}
+                    </div>
+                    <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

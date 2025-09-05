@@ -20,6 +20,12 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
   const createTask = useMutation(api.tasks.createTask);
   const scheduleTaskToWeek = useMutation(api.tasks.scheduleTaskToWeek);
 
+  // Get today's date in user's local timezone for comparison
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth();
+  const todayDay = today.getDate();
+
   // Calculate dates for a specific week
   const getWeekDates = (weekId: string) => {
     const sunday = new Date(weekId);
@@ -175,21 +181,35 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
           <div>
             <h3 className="text-sm font-medium text-foreground mb-2">This Week</h3>
             <div className="grid grid-cols-7 gap-1">
-              {currentWeekOptions.map((option) => (
-                <button
-                  type="button"
-                  key={`current-${option.value}`}
-                  onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
-                  className={`p-2 rounded-md border transition-colors touch-manipulation min-h-[44px] text-center ${
-                    selectedOption?.value === option.value && selectedOption?.weekId === option.weekId
-                      ? 'border-primary bg-primary/10 text-primary' 
-                      : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
-                  }`}
-                >
-                  <div className="text-xs font-medium">{option.value.charAt(0).toUpperCase()}</div>
-                  <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
-                </button>
-              ))}
+              {currentWeekOptions.map((option) => {
+                // Parse weekId as local date (not UTC)
+                const [year, month, day] = option.weekId.split('-').map(Number);
+                const sunday = new Date(year, month - 1, day); // month is 0-indexed
+                const dayIndex = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(option.value);
+                const optionDate = new Date(sunday);
+                optionDate.setDate(sunday.getDate() + dayIndex);
+                
+                const isToday = optionDate.getFullYear() === todayYear && 
+                               optionDate.getMonth() === todayMonth && 
+                               optionDate.getDate() === todayDay;
+                return (
+                  <button
+                    type="button"
+                    key={`current-${option.value}`}
+                    onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
+                    className={`p-2 rounded-md transition-colors touch-manipulation min-h-[44px] text-center ${
+                      selectedOption?.value === option.value && selectedOption?.weekId === option.weekId
+                        ? 'border-primary bg-primary/10 text-primary' 
+                        : isToday
+                        ? 'border-blue-500 border-2 text-foreground hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
+                    }`}
+                  >
+                    <div className="text-xs font-medium">{option.value.charAt(0).toUpperCase()}</div>
+                    <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -197,21 +217,34 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
           <div>
             <h3 className="text-sm font-medium text-foreground mb-2">Next Week</h3>
             <div className="grid grid-cols-7 gap-1">
-              {nextWeekOptions.map((option) => (
-                <button
-                  type="button"
-                  key={`next-${option.value}`}
-                  onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
-                  className={`p-2 rounded-md border transition-colors touch-manipulation min-h-[44px] text-center ${
-                    selectedOption?.value === option.value && selectedOption?.weekId === option.weekId
-                      ? 'border-primary bg-primary/10 text-primary' 
-                      : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
-                  }`}
-                >
-                  <div className="text-xs font-medium">{option.value.charAt(0).toUpperCase()}</div>
-                  <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
-                </button>
-              ))}
+              {nextWeekOptions.map((option) => {
+                // Parse weekId as local date (not UTC)
+                const [year, month, day] = option.weekId.split('-').map(Number);
+                const sunday = new Date(year, month - 1, day); // month is 0-indexed
+                const dayIndex = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(option.value);
+                const optionDate = new Date(sunday);
+                optionDate.setDate(sunday.getDate() + dayIndex);
+                const isToday = optionDate.getFullYear() === todayYear && 
+                               optionDate.getMonth() === todayMonth && 
+                               optionDate.getDate() === todayDay;
+                return (
+                  <button
+                    type="button"
+                    key={`next-${option.value}`}
+                    onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
+                    className={`p-2 rounded-md transition-colors touch-manipulation min-h-[44px] text-center ${
+                      selectedOption?.value === option.value && selectedOption?.weekId === option.weekId
+                        ? 'border-primary bg-primary/10 text-primary' 
+                        : isToday
+                        ? 'border-blue-500 border-2 text-foreground hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
+                    }`}
+                  >
+                    <div className="text-xs font-medium">{option.value.charAt(0).toUpperCase()}</div>
+                    <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
