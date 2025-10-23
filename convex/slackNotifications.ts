@@ -1,6 +1,5 @@
 import { internalAction, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
 
 // Day status type
@@ -205,13 +204,3 @@ export const sendScheduledDailyTasks = internalAction({
     }
   },
 });
-
-// Scheduled cron job - runs daily at 7:00 AM EST
-export const crons = cronJobs();
-
-crons.daily(
-  "send daily tasks to slack",
-  { hourUTC: 11, minuteUTC: 0 }, // 7:00 AM EST (UTC-4) = 11:00 UTC
-  internal.slackNotifications.sendScheduledDailyTasks,
-  {} // args - runs with current day
-);
