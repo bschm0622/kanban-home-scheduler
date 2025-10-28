@@ -11,10 +11,11 @@ import TaskEditModal from "./TaskEditModal";
 import TaskScheduleModal from "./TaskScheduleModal";
 import RecurringTasksModal from "./RecurringTasksModal";
 import HistoryModal from "./HistoryModal";
-import BacklogReviewModal from "./BacklogReviewModal";
+import WeeklyReviewModal from "./WeeklyReviewModal";
 import TaskColumn from "./TaskColumn";
 import PWAInstallPrompt, { useAppVisitTracker } from "./PWAInstallPrompt";
 import AppHeader from "./AppHeader";
+import MilestoneModal from "./MilestoneModal";
 
 const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
@@ -38,9 +39,8 @@ export default function KanbanBoard() {
   const data = viewingCurrentWeek ? currentWeekData : nextWeekData;
   
   
-  // Check if user needs backlog review
-  const shouldShowBacklogReview = useQuery(api.userSettings.shouldShowBacklogReview);
-  const oldestBacklogTasks = useQuery(api.tasks.getOldestBacklogTasks);
+  // Check if user needs weekly review
+  const shouldShowWeeklyReview = useQuery(api.weeklyReview.shouldShowWeeklyReview);
 
   const updateTaskStatus = useMutation(api.tasks.updateTaskStatus);
   const scheduleTaskToWeek = useMutation(api.tasks.scheduleTaskToWeek);
@@ -57,9 +57,11 @@ export default function KanbanBoard() {
   const [showRolloverConfirm, setShowRolloverConfirm] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [showBacklogReview, setShowBacklogReview] = useState(false);
+  const [showWeeklyReview, setShowWeeklyReview] = useState(false);
   const [globalExpanded, setGlobalExpanded] = useState<boolean | null>(null);
   const [columnStates, setColumnStates] = useState<Record<string, boolean>>({});
+  const [showMilestone, setShowMilestone] = useState(false);
+  const [milestoneDay, setMilestoneDay] = useState<number>(0);
 
   // Calculate if all columns are expanded
   const allExpanded = Object.values(columnStates).length > 0 && Object.values(columnStates).every(expanded => expanded);
@@ -121,15 +123,15 @@ export default function KanbanBoard() {
     }
   }, [data, autoRollover]);
   
-  // Show backlog review modal if needed
+  // Show weekly review modal if needed
   useEffect(() => {
-    if (shouldShowBacklogReview === true && data && oldestBacklogTasks && oldestBacklogTasks.length > 0) {
+    if (shouldShowWeeklyReview === true && data) {
       const timer = setTimeout(() => {
-        setShowBacklogReview(true);
+        setShowWeeklyReview(true);
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [shouldShowBacklogReview, data, oldestBacklogTasks]);
+  }, [shouldShowWeeklyReview, data]);
 
   if (!data) {
     return (
@@ -146,8 +148,21 @@ export default function KanbanBoard() {
     updateTaskStatus({ taskId, newStatus });
   };
 
-  const handleComplete = (taskId: Id<"tasks">) => {
-    completeTask({ taskId });
+  const handleComplete = async (taskId: Id<"tasks">) => {
+    try {
+      const result = await completeTask({ taskId });
+
+      // Check if this was a milestone - delay showing modal to enjoy confetti first
+      if (result?.streakData?.isMilestone && result.streakData.milestoneDay) {
+        setMilestoneDay(result.streakData.milestoneDay);
+        // Wait 2 seconds to let confetti animation play
+        setTimeout(() => {
+          setShowMilestone(true);
+        }, 2000);
+      }
+    } catch (error) {
+      // Handle error silently - task completion will fail and UI won't update
+    }
   };
 
   const handleDelete = (taskId: Id<"tasks">) => {
@@ -410,10 +425,10 @@ export default function KanbanBoard() {
       {/* History modal */}
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
 
-      {/* Backlog review modal */}
-      <BacklogReviewModal 
-        isOpen={showBacklogReview} 
-        onClose={() => setShowBacklogReview(false)}
+      {/* Weekly review modal */}
+      <WeeklyReviewModal
+        isOpen={showWeeklyReview}
+        onClose={() => setShowWeeklyReview(false)}
         currentWeekId={currentWeekId}
         nextWeekId={nextWeekId}
       />
@@ -469,6 +484,13 @@ export default function KanbanBoard() {
 
       {/* PWA Install Prompt */}
       <PWAInstallPrompt />
+
+      {/* Milestone Celebration Modal */}
+      <MilestoneModal
+        isOpen={showMilestone}
+        milestoneDay={milestoneDay}
+        onClose={() => setShowMilestone(false)}
+      />
     </div>
   );
 }

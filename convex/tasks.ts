@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 // Get current week ID (Sunday of current week in YYYY-MM-DD format)
 function getCurrentWeekId(): string {
@@ -222,20 +223,34 @@ export const completeTask = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    
+
     // Verify user owns this task
     const task = await ctx.db.get(args.taskId);
     if (!task || task.userId !== identity.subject) {
       throw new Error("Task not found or access denied");
     }
-    
+
     const currentWeekId = getCurrentWeekId();
-    
-    return await ctx.db.patch(args.taskId, {
+
+    // Update task status
+    await ctx.db.patch(args.taskId, {
       status: "completed",
       completedAt: Date.now(),
       weekId: currentWeekId,
     });
+
+    // Update user's streak (import from streaks.ts)
+    const streakUpdate: {
+      currentStreak: number;
+      longestStreak: number;
+      isMilestone: boolean;
+      milestoneDay: number | null;
+    } = await ctx.runMutation(internal.streaks.updateStreak);
+
+    return {
+      taskId: args.taskId,
+      streakData: streakUpdate,
+    };
   },
 });
 

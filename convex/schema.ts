@@ -9,7 +9,7 @@ export default defineSchema({
       v.literal("backlog"),
       v.literal("sunday"),
       v.literal("monday"),
-      v.literal("tuesday"), 
+      v.literal("tuesday"),
       v.literal("wednesday"),
       v.literal("thursday"),
       v.literal("friday"),
@@ -22,6 +22,8 @@ export default defineSchema({
     createdAt: v.number(),
     recurringTaskId: v.optional(v.id("recurringTasks")),
     userId: v.string(), // Clerk user ID
+    isCommitment: v.optional(v.boolean()), // Is this a commitment task for the week?
+    commitmentWeekId: v.optional(v.string()), // Which week was this committed to?
   })
     .index("by_status", ["status"])
     .index("by_week", ["weekId"])
@@ -56,6 +58,10 @@ export default defineSchema({
     isArchived: v.boolean(),
     createdAt: v.number(),
     userId: v.string(), // Clerk user ID
+    commitmentTaskIds: v.optional(v.array(v.id("tasks"))), // Tasks committed for this week
+    weekTheme: v.optional(v.string()), // Optional theme/intention for the week
+    reflectionNote: v.optional(v.string()), // Reflection note from week review
+    reviewCompletedAt: v.optional(v.number()), // When the weekly review was completed
   })
     .index("by_week_id", ["weekId"])
     .index("by_user", ["userId"])
@@ -63,7 +69,19 @@ export default defineSchema({
 
   userSettings: defineTable({
     userId: v.string(), // Clerk user ID
-    lastBacklogReviewWeekId: v.optional(v.string()), // Last week user reviewed backlog
+    lastBacklogReviewWeekId: v.optional(v.string()), // Last week user reviewed backlog (deprecated)
+    lastWeekReviewWeekId: v.optional(v.string()), // Last week user completed full weekly review
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"]),
+
+  streaks: defineTable({
+    userId: v.string(), // Clerk user ID
+    currentStreak: v.number(), // Current consecutive days with completed tasks
+    longestStreak: v.number(), // Longest streak ever achieved
+    lastCompletionDate: v.string(), // YYYY-MM-DD format of last task completion
+    streakStartDate: v.string(), // YYYY-MM-DD format when current streak started
     createdAt: v.number(),
     updatedAt: v.number(),
   })
