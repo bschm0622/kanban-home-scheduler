@@ -1,4 +1,4 @@
-import { internalAction, internalQuery } from "./_generated/server";
+import { internalAction, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
@@ -183,24 +183,287 @@ export const sendScheduledDailyTasks = internalAction({
       dayName: dayName,
     });
 
-    if (tasks.length > 0) {
-      const message = formatSlackMessage(tasks, dayName);
+    // Get streak data and commitment data
+    const streakQuery = await ctx.runQuery(internal.slackNotifications.getStreakForUsers);
+    const commitmentQuery = await ctx.runQuery(internal.slackNotifications.getCommitmentsForUsers, { weekId: currentWeekId });
 
-      try {
-        await sendToSlack(webhookUrl, message);
-        console.log(`Sent daily tasks notification: ${tasks.length} tasks for ${dayName}`);
-        return {
-          success: true,
-          taskCount: tasks.length,
-          day: dayName
-        };
-      } catch (error) {
-        console.error("Failed to send scheduled Slack notification:", error);
-        return { success: false, error: String(error) };
+    const message = formatEnhancedSlackMessage(tasks, dayName, streakQuery, commitmentQuery);
+
+    try {
+      await sendToSlack(webhookUrl, message);
+      console.log(`Sent daily tasks notification: ${tasks.length} tasks for ${dayName}`);
+      return {
+        success: true,
+        taskCount: tasks.length,
+        day: dayName
+      };
+    } catch (error) {
+      console.error("Failed to send scheduled Slack notification:", error);
+      return { success: false, error: String(error) };
+    }
+  },
+});
+
+// Get streak data for allowed users
+export const getStreakForUsers = internalQuery({
+  handler: async (ctx) => {
+    const streaks = await ctx.db.query("streaks").collect();
+    return streaks.filter(s => ALLOWED_USER_IDS.includes(s.userId));
+  },
+});
+
+// Get commitment data for allowed users
+export const getCommitmentsForUsers = internalQuery({
+  args: { weekId: v.string() },
+  handler: async (ctx, args) => {
+    const allTasks = await ctx.db.query("tasks").collect();
+    const commitmentTasks = allTasks.filter(t =>
+      ALLOWED_USER_IDS.includes(t.userId) &&
+      t.isCommitment &&
+      t.commitmentWeekId === args.weekId
+    );
+
+    const completed = commitmentTasks.filter(t => t.status === "completed");
+    return {
+      total: commitmentTasks.length,
+      completed: completed.length,
+      tasks: commitmentTasks,
+    };
+  },
+});
+
+// Enhanced morning message format with streak and commitments
+function formatEnhancedSlackMessage(tasks: any[], dayName: string, streaks: any[], commitments: any): any {
+  const commitmentTasks = tasks.filter(t => t.isCommitment);
+  const formattedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+  const dayIcon = getDayIcon(dayName);
+
+  const blocks: any[] = [
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: `${dayIcon} Good morning! Here's your ${formattedDay}`,
+        emoji: true
       }
-    } else {
-      console.log(`No tasks scheduled for ${dayName}, skipping notification`);
-      return { success: true, taskCount: 0, day: dayName };
+    }
+  ];
+
+  if (streaks.length > 0 && streaks[0].currentStreak > 0) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `🔥 *${streaks[0].currentStreak} day streak* - keep it going!`
+      }
+    });
+  }
+
+  if (commitmentTasks.length > 0) {
+    blocks.push({
+      type: "divider"
+    });
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*🎯 Today's Commitments (${commitmentTasks.length})*\n${commitmentTasks.map(t => `📌 ${t.title} [${t.priority.toUpperCase()}]`).join('\n')}`
+      }
+    });
+  }
+
+  const otherTasks = tasks.filter(t => !t.isCommitment);
+  if (otherTasks.length > 0) {
+    blocks.push({
+      type: "divider"
+    });
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*📋 Other Tasks (${otherTasks.length})*\n${otherTasks.map(t => `• ${t.title} [${priorityEmoji(t.priority)}]`).join('\n')}`
+      }
+    });
+  }
+
+  blocks.push({
+    type: "context",
+    elements: [{
+      type: "mrkdwn",
+      text: `📊 Total: ${tasks.length} tasks | 🎯 Commitments: ${commitments.completed}/${commitments.total} this week`
+    }]
+  });
+
+  return { blocks, text: `${formattedDay}'s Tasks: ${tasks.length} tasks` };
+}
+
+function getDayIcon(day: string): string {
+  const icons: Record<string, string> = {
+    monday: "💼", tuesday: "🚀", wednesday: "⚡", thursday: "💪",
+    friday: "🎉", saturday: "🌞", sunday: "☀️",
+  };
+  return icons[day] || "📅";
+}
+
+function priorityEmoji(priority: string): string {
+  return priority === "high" ? "🔴" : priority === "medium" ? "🟡" : "🟢";
+}
+
+// End of day summary
+export const sendEndOfDaySummary = internalAction({
+  handler: async (ctx) => {
+    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+    if (!webhookUrl) return { success: false, error: "SLACK_WEBHOOK_URL not configured" };
+
+    const currentWeekId = getCurrentWeekId();
+    const today = getCurrentDayName();
+    const todayTasks: any[] = await ctx.runQuery(internal.slackNotifications.getTasksForDay, {
+      weekId: currentWeekId,
+      dayName: today,
+    });
+
+    const completed = todayTasks.filter(t => t.status === "completed");
+    const remaining = todayTasks.filter(t => t.status !== "completed");
+    const streaks = await ctx.runQuery(internal.slackNotifications.getStreakForUsers);
+    const currentStreak = streaks[0]?.currentStreak || 0;
+
+    const blocks: any[] = [
+      {
+        type: "header",
+        text: { type: "plain_text", text: `🌙 ${today.charAt(0).toUpperCase() + today.slice(1)} Wrap-Up`, emoji: true }
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `✅ *Completed: ${completed.length}/${todayTasks.length} tasks* (${Math.round((completed.length / todayTasks.length) * 100)}%)` }
+      }
+    ];
+
+    if (remaining.length > 0) {
+      blocks.push({
+        type: "section",
+        text: { type: "mrkdwn", text: `⏳ *Still open (${remaining.length}):*\n${remaining.map(t => `• ${t.title}${t.isCommitment ? ' [Commitment]' : ''}`).join('\n')}` }
+      });
+    }
+
+    blocks.push({
+      type: "context",
+      elements: [{ type: "mrkdwn", text: `🔥 Streak: ${currentStreak} days ${completed.length > 0 ? '' : '(complete 1 task to keep it!)'}` }]
+    });
+
+    try {
+      await sendToSlack(webhookUrl, { blocks, text: `${today} Wrap-Up` });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  },
+});
+
+// Streak protection alert
+export const sendStreakAlert = internalAction({
+  handler: async (ctx) => {
+    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+    if (!webhookUrl) return { success: false };
+
+    const streaks = await ctx.runQuery(internal.slackNotifications.getStreakForUsers);
+    if (streaks.length === 0 || streaks[0].currentStreak === 0) return { success: true };
+
+    const currentWeekId = getCurrentWeekId();
+    const today = getCurrentDayName();
+    const todayTasks: any[] = await ctx.runQuery(internal.slackNotifications.getTasksForDay, {
+      weekId: currentWeekId,
+      dayName: today,
+    });
+
+    const completedToday = todayTasks.filter(t => t.status === "completed");
+    if (completedToday.length > 0) return { success: true };
+
+    const currentStreak = streaks[0].currentStreak;
+    const quickWins = todayTasks.filter(t => t.priority === "low").slice(0, 3);
+
+    const blocks = [
+      {
+        type: "header",
+        text: { type: "plain_text", text: "⚠️ Streak Alert! 🔥", emoji: true }
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `You're on a *${currentStreak}-day streak*, but haven't completed any tasks today.` }
+      }
+    ];
+
+    if (quickWins.length > 0) {
+      blocks.push({
+        type: "section",
+        text: { type: "mrkdwn", text: `*Quick wins:*\n${quickWins.map(t => `• ${t.title}`).join('\n')}` }
+      });
+    }
+
+    blocks.push({ type: "section", text: { type: "mrkdwn", text: "Don't break the chain! ⛓️" } });
+
+    try {
+      await sendToSlack(webhookUrl, { blocks, text: `Streak Alert: ${currentStreak} days` });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  },
+});
+
+// Get week tasks for recap
+export const getWeekTasksForRecap = internalQuery({
+  args: { weekId: v.string() },
+  handler: async (ctx, args) => {
+    const allTasks = await ctx.db.query("tasks").collect();
+    const weekTasks = allTasks.filter((t: any) => ALLOWED_USER_IDS.includes(t.userId) && t.weekId === args.weekId);
+    const completed = weekTasks.filter((t: any) => t.status === "completed");
+    const commitments = weekTasks.filter((t: any) => t.isCommitment);
+    const completedCommitments = commitments.filter((t: any) => t.status === "completed");
+
+    return {
+      total: weekTasks.length,
+      completed: completed.length,
+      commitments: commitments.length,
+      completedCommitments: completedCommitments.length,
+    };
+  },
+});
+
+// Weekly recap
+export const sendWeeklyRecap = internalAction({
+  handler: async (ctx) => {
+    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+    if (!webhookUrl) return { success: false };
+
+    const currentWeekId = getCurrentWeekId();
+    const stats = await ctx.runQuery(internal.slackNotifications.getWeekTasksForRecap, { weekId: currentWeekId });
+    const streaks = await ctx.runQuery(internal.slackNotifications.getStreakForUsers);
+    const currentStreak = streaks[0]?.currentStreak || 0;
+
+    const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+    const commitmentRate = stats.commitments > 0 ? Math.round((stats.completedCommitments / stats.commitments) * 100) : 0;
+
+    const blocks = [
+      {
+        type: "header",
+        text: { type: "plain_text", text: "📊 Weekly Recap: Great work! 🎉", emoji: true }
+      },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*✅ Completed*\n${stats.completed}/${stats.total} tasks (${completionRate}%)` },
+          { type: "mrkdwn", text: `*🎯 Commitments*\n${stats.completedCommitments}/${stats.commitments} (${commitmentRate}%)` },
+          { type: "mrkdwn", text: `*🔥 Streak*\n${currentStreak} days` },
+          { type: "mrkdwn", text: `*💪 Total*\n${stats.total} tasks` }
+        ]
+      }
+    ];
+
+    try {
+      await sendToSlack(webhookUrl, { blocks, text: `Weekly Recap: ${stats.completed}/${stats.total} tasks` });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: String(error) };
     }
   },
 });

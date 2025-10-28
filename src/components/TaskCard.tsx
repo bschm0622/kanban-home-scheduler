@@ -1,4 +1,5 @@
 import { useState } from "react";
+import confetti from "canvas-confetti";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { Task, TaskStatus } from "../types";
 
@@ -14,6 +15,33 @@ interface TaskCardProps {
 export default function TaskCard({ task, onStatusChange, onComplete, onDelete, onEdit, onSchedule }: TaskCardProps) {
   const [showActions, setShowActions] = useState(false);
 
+  const handleComplete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // Trigger confetti
+    const colors = {
+      high: ['#ef4444', '#dc2626', '#b91c1c'], // red shades
+      medium: ['#eab308', '#ca8a04', '#a16207'], // yellow shades
+      low: ['#22c55e', '#16a34a', '#15803d'], // green shades
+    };
+
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { x: 0.5, y: 0.5 },
+      colors: colors[task.priority],
+      scalar: 0.8,
+    });
+
+    // Haptic feedback on mobile
+    if (navigator.vibrate) {
+      navigator.vibrate(10);
+    }
+
+    // Call the complete handler
+    onComplete(task._id);
+  };
+
   return (
     <div 
       className={`task-card priority-${task.priority}`}
@@ -22,7 +50,14 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
       <div className="task-content">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-foreground text-sm leading-snug">{task.title}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium text-foreground text-sm leading-snug">{task.title}</h3>
+              {task.isCommitment && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-medium flex-shrink-0" title="Weekly Commitment">
+                  📌
+                </span>
+              )}
+            </div>
             {task.description && (
               <p className="text-xs text-tertiary mt-1 leading-relaxed">{task.description}</p>
             )}
@@ -31,10 +66,7 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
             {/* Quick complete button - hide if already completed */}
             {task.status !== 'completed' && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onComplete(task._id);
-                }}
+                onClick={handleComplete}
                 className="w-5 h-5 rounded border-2 border-muted hover:border-green-500 flex items-center justify-center text-muted hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
                 title="Mark as complete"
               >

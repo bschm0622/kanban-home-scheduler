@@ -17,12 +17,14 @@
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "astro": "^5.9.3",
+    "canvas-confetti": "^1.9.4",
     "convex": "^1.25.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "tailwindcss": "^4.1.10"
   },
   "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
     "@vite-pwa/astro": "^1.1.0"
   }
 }
