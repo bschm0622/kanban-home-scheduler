@@ -207,8 +207,63 @@ export const sendScheduledDailyTasks = internalAction({
 // Get streak data for allowed users
 export const getStreakForUsers = internalQuery({
   handler: async (ctx) => {
-    const streaks = await ctx.db.query("streaks").collect();
-    return streaks.filter(s => ALLOWED_USER_IDS.includes(s.userId));
+    const results = [];
+
+    for (const userId of ALLOWED_USER_IDS) {
+      // Get all completed tasks for this user
+      const completedTasks = await ctx.db
+        .query("tasks")
+        .withIndex("by_user_and_status", (q) => q.eq("userId", userId).eq("status", "completed"))
+        .collect();
+
+      // Extract completion dates
+      const completionDates = completedTasks
+        .filter(task => task.completedAt)
+        .map(task => {
+          const date = new Date(task.completedAt!);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        });
+
+      // Calculate current streak (simplified from streaks.ts)
+      const uniqueDates = [...new Set(completionDates)].sort().reverse();
+      let currentStreak = 0;
+
+      if (uniqueDates.length > 0) {
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+        // Check if most recent completion was today or yesterday
+        if (uniqueDates[0] === today || uniqueDates[0] === yesterdayStr) {
+          currentStreak = 1;
+
+          // Count consecutive days backwards
+          for (let i = 1; i < uniqueDates.length; i++) {
+            const currentDate = new Date(uniqueDates[i - 1]);
+            const prevDate = new Date(uniqueDates[i]);
+            const diffDays = Math.floor((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) {
+              currentStreak++;
+            } else {
+              break;
+            }
+          }
+        }
+      }
+
+      results.push({
+        userId,
+        currentStreak,
+      });
+    }
+
+    return results;
   },
 });
 

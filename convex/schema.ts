@@ -75,15 +75,4 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"]),
-
-  streaks: defineTable({
-    userId: v.string(), // Clerk user ID
-    currentStreak: v.number(), // Current consecutive days with completed tasks
-    longestStreak: v.number(), // Longest streak ever achieved
-    lastCompletionDate: v.string(), // YYYY-MM-DD format of last task completion
-    streakStartDate: v.string(), // YYYY-MM-DD format when current streak started
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_user", ["userId"]),
 });

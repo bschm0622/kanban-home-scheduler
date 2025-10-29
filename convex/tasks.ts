@@ -1,6 +1,5 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
 
 // Get current week ID (Sunday of current week in YYYY-MM-DD format)
 function getCurrentWeekId(): string {
@@ -239,17 +238,8 @@ export const completeTask = mutation({
       weekId: currentWeekId,
     });
 
-    // Update user's streak (import from streaks.ts)
-    const streakUpdate: {
-      currentStreak: number;
-      longestStreak: number;
-      isMilestone: boolean;
-      milestoneDay: number | null;
-    } = await ctx.runMutation(internal.streaks.updateStreak);
-
     return {
       taskId: args.taskId,
-      streakData: streakUpdate,
     };
   },
 });
