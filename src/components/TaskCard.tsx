@@ -126,7 +126,7 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
   return (
     <div
       ref={cardRef}
-      className={`task-card priority-${task.priority} relative overflow-hidden`}
+      className="task-card relative overflow-hidden"
       onClick={handleCardClick}
     >
       {/* Swipe backgrounds - positioned behind card content */}
@@ -146,7 +146,7 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
       )}
 
       {/* Card content — slides to reveal swipe background */}
-      <div ref={contentRef} className="relative z-10 bg-surface rounded-lg">
+      <div ref={contentRef} className={`relative z-10 bg-surface rounded-lg priority-${task.priority}`}>
         <div className="task-content">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
