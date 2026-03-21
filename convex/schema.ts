@@ -24,6 +24,9 @@ export default defineSchema({
     userId: v.string(), // Clerk user ID
     isCommitment: v.optional(v.boolean()), // Is this a commitment task for the week?
     commitmentWeekId: v.optional(v.string()), // Which week was this committed to?
+    dueTime: v.optional(v.string()), // "HH:MM" in 24h format (EST) — triggers Slack reminder
+    reminderJobId: v.optional(v.id("_scheduled_functions")), // Scheduled reminder job reference
+    deletedAt: v.optional(v.number()), // Soft delete timestamp — permanently removed after 24h
   })
     .index("by_status", ["status"])
     .index("by_week", ["weekId"])
@@ -47,12 +50,13 @@ export default defineSchema({
       v.literal("saturday")
     )),
     isActive: v.boolean(),
+    dueTime: v.optional(v.string()), // "HH:MM" 24h format — inherited by generated tasks
     createdAt: v.number(),
     userId: v.string(), // Clerk user ID
   }).index("by_user", ["userId"]),
 
   weeks: defineTable({
-    weekId: v.string(), // Format: YYYY-MM-DD (Monday of the week)
+    weekId: v.string(), // Format: YYYY-MM-DD (Sunday of the week)
     startDate: v.string(), // ISO date string
     endDate: v.string(), // ISO date string
     isArchived: v.boolean(),

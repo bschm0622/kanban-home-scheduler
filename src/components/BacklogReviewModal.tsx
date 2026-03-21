@@ -253,7 +253,7 @@ export default function BacklogReviewModal({ isOpen, onClose, currentWeekId, nex
                                   e.stopPropagation();
                                   handleScheduleTask(task._id, currentWeekId, option.value);
                                 }}
-                                className="p-3 rounded-md border transition-colors touch-manipulation min-h-[48px] text-center border-muted text-foreground hover:border-primary/50 hover:bg-primary/5"
+                                className="p-2 rounded-lg border border-muted transition-colors touch-manipulation min-h-[44px] text-center text-foreground hover:border-primary/50 hover:bg-primary/5"
                               >
                                 <div className="text-xs font-medium">{option.value.charAt(0).toUpperCase()}</div>
                                 <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
@@ -273,7 +273,7 @@ export default function BacklogReviewModal({ isOpen, onClose, currentWeekId, nex
                                   e.stopPropagation();
                                   handleScheduleTask(task._id, nextWeekId, option.value);
                                 }}
-                                className="p-3 rounded-md border transition-colors touch-manipulation min-h-[48px] text-center border-muted text-foreground hover:border-primary/50 hover:bg-primary/5"
+                                className="p-2 rounded-lg border border-muted transition-colors touch-manipulation min-h-[44px] text-center text-foreground hover:border-primary/50 hover:bg-primary/5"
                               >
                                 <div className="text-xs font-medium">{option.value.charAt(0).toUpperCase()}</div>
                                 <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
@@ -289,7 +289,7 @@ export default function BacklogReviewModal({ isOpen, onClose, currentWeekId, nex
                               e.stopPropagation();
                               handleSkipTask(task._id);
                             }}
-                            className="w-full p-3 rounded-lg border text-center transition-colors touch-manipulation min-h-[48px] relative border-muted text-foreground hover:border-primary/50 hover:bg-primary/5"
+                            className="w-full p-3 rounded-lg border border-muted text-center transition-colors touch-manipulation min-h-[48px] text-foreground hover:border-primary/50 hover:bg-primary/5"
                           >
                             <div className="font-medium">Backlog</div>
                             <div className="text-xs opacity-70">Keep unscheduled</div>

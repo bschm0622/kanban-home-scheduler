@@ -30,13 +30,17 @@ export default function WeeklyReviewModal({
   const weeklySummary = useQuery(api.weeklyReview.getWeeklySummary, { weekId: currentWeekId });
   const oldestBacklogTasks = useQuery(api.tasks.getOldestBacklogTasks);
   const nextWeekData = useQuery(api.tasks.getWeekTasks, { weekId: nextWeekId });
-  const streakData = useQuery(api.streaks.getStreak);
-
   // Mutations
   const markReviewed = useMutation(api.weeklyReview.markWeekReviewed);
   const setCommitments = useMutation(api.weeklyReview.setWeekCommitments);
   const scheduleTaskToWeek = useMutation(api.tasks.scheduleTaskToWeek);
   const deleteTask = useMutation(api.tasks.deleteTask);
+
+  // Dismiss = mark reviewed so it doesn't nag on every app open
+  const handleDismiss = async () => {
+    await markReviewed({ weekId: currentWeekId });
+    onClose();
+  };
 
   // Reset state when modal closes
   useEffect(() => {
@@ -157,7 +161,7 @@ export default function WeeklyReviewModal({
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 📊 Week Review
               </h2>
-              <button onClick={onClose} className="text-tertiary hover:text-foreground text-2xl leading-none">×</button>
+              <button onClick={handleDismiss} className="text-tertiary hover:text-foreground text-2xl leading-none">×</button>
             </div>
             <div className="flex gap-2 mt-3">
               <div className="flex-1 h-1.5 bg-primary rounded"></div>
@@ -196,12 +200,6 @@ export default function WeeklyReviewModal({
                       </div>
                     </>
                   )}
-                  {streakData && streakData.currentStreak > 0 && (
-                    <div className="bg-secondary rounded-lg p-4 text-center col-span-2">
-                      <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">🔥 {streakData.currentStreak} days</div>
-                      <div className="text-xs text-tertiary">Current Streak</div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="mb-4">
@@ -212,7 +210,7 @@ export default function WeeklyReviewModal({
                     value={reflectionNote}
                     onChange={(e) => setReflectionNote(e.target.value)}
                     placeholder="What helped you succeed this week? What could be improved?"
-                    className="w-full px-3 py-2 border border-muted rounded-lg bg-surface text-foreground placeholder-tertiary resize-none"
+                    className="w-full p-3 border border-muted rounded-lg bg-surface text-foreground placeholder-tertiary resize-none text-base"
                     rows={3}
                   />
                 </div>
@@ -246,7 +244,7 @@ export default function WeeklyReviewModal({
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 🧹 Backlog Cleanup
               </h2>
-              <button onClick={onClose} className="text-tertiary hover:text-foreground text-2xl leading-none">×</button>
+              <button onClick={handleDismiss} className="text-tertiary hover:text-foreground text-2xl leading-none">×</button>
             </div>
             <p className="text-sm text-tertiary">Review your oldest backlog tasks</p>
             <div className="flex gap-2 mt-3">
@@ -304,7 +302,7 @@ export default function WeeklyReviewModal({
                                     e.stopPropagation();
                                     handleScheduleTask(task._id, currentWeekId, option.value);
                                   }}
-                                  className="p-2 rounded-md border transition-colors touch-manipulation min-h-[44px] text-center border-muted text-foreground hover:border-primary/50 hover:bg-primary/5 text-xs"
+                                  className="p-2 rounded-lg border border-muted transition-colors touch-manipulation min-h-[44px] text-center text-foreground hover:border-primary/50 hover:bg-primary/5 text-xs"
                                 >
                                   {option.value.charAt(0).toUpperCase()}
                                 </button>
@@ -322,7 +320,7 @@ export default function WeeklyReviewModal({
                                     e.stopPropagation();
                                     handleScheduleTask(task._id, nextWeekId, option.value);
                                   }}
-                                  className="p-2 rounded-md border transition-colors touch-manipulation min-h-[44px] text-center border-muted text-foreground hover:border-primary/50 hover:bg-primary/5 text-xs"
+                                  className="p-2 rounded-lg border border-muted transition-colors touch-manipulation min-h-[44px] text-center text-foreground hover:border-primary/50 hover:bg-primary/5 text-xs"
                                 >
                                   {option.value.charAt(0).toUpperCase()}
                                 </button>
@@ -336,7 +334,7 @@ export default function WeeklyReviewModal({
                                 e.stopPropagation();
                                 handleSkipTask(task._id);
                               }}
-                              className="w-full p-3 rounded-lg border text-center transition-colors touch-manipulation min-h-[48px] border-muted text-foreground hover:border-primary/50 hover:bg-primary/5"
+                              className="w-full p-3 rounded-lg border border-muted text-center transition-colors touch-manipulation min-h-[48px] text-foreground hover:border-primary/50 hover:bg-primary/5"
                             >
                               <div className="font-medium text-sm">Keep in Backlog</div>
                             </button>
@@ -387,7 +385,7 @@ export default function WeeklyReviewModal({
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 🎯 Next Week's Commitments
               </h2>
-              <button onClick={onClose} className="text-tertiary hover:text-foreground text-2xl leading-none">×</button>
+              <button onClick={handleDismiss} className="text-tertiary hover:text-foreground text-2xl leading-none">×</button>
             </div>
             <p className="text-sm text-tertiary">Pick 3-5 must-do tasks for next week</p>
             <div className="flex gap-2 mt-3">
@@ -407,7 +405,7 @@ export default function WeeklyReviewModal({
                 value={weekTheme}
                 onChange={(e) => setWeekTheme(e.target.value)}
                 placeholder='e.g., "Health Week", "Deep Work", "Get Organized"'
-                className="w-full px-3 py-2 border border-muted rounded-lg bg-surface text-foreground placeholder-tertiary"
+                className="w-full p-3 border border-muted rounded-lg bg-surface text-foreground placeholder-tertiary text-base"
               />
             </div>
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { TaskStatus } from "../types";
+import TimePicker from "./TimePicker";
 
 interface TaskFormProps {
   isOpen: boolean;
@@ -16,9 +17,9 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [selectedOption, setSelectedOption] = useState<{value: TaskStatus, weekId: string} | null>({ value: "backlog", weekId: "" });
-  
+  const [dueTime, setDueTime] = useState("");
+
   const createTask = useMutation(api.tasks.createTask);
-  const scheduleTaskToWeek = useMutation(api.tasks.scheduleTaskToWeek);
 
   // Get today's date in user's local timezone for comparison
   const today = new Date();
@@ -57,26 +58,19 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
     if (!title.trim() || !selectedOption) return;
 
     try {
-      // Create the task first
-      const taskId = await createTask({
+      await createTask({
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
-        status: "backlog", // Always create in backlog first
+        status: selectedOption.value === "completed" ? "backlog" : selectedOption.value,
+        weekId: selectedOption.weekId || undefined,
+        dueTime: dueTime || undefined,
       });
-      
-      // If it's not backlog, schedule it to the appropriate week
-      if (selectedOption.value !== "backlog") {
-        await scheduleTaskToWeek({
-          taskId,
-          newStatus: selectedOption.value,
-          weekId: selectedOption.weekId,
-        });
-      }
-      
+
       setTitle("");
       setDescription("");
       setPriority("medium");
+      setDueTime("");
       setSelectedOption({ value: "backlog", weekId: "" });
       onClose();
     } catch (error) {
@@ -103,7 +97,7 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Task Title *
             </label>
             <input
@@ -117,7 +111,7 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Description
             </label>
             <textarea
@@ -130,7 +124,7 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Priority
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -160,7 +154,7 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
 
           {/* Backlog Option */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-3">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Schedule for
             </label>
             <button
@@ -248,18 +242,32 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
             </div>
           </div>
 
-          <div className="flex space-x-3 pt-6" style={{paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`}}>
+          {/* Due Time - only show when a day is selected */}
+          {selectedOption && selectedOption.value !== "backlog" && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Reminder <span className="text-tertiary font-normal">(sends Slack notification)</span>
+              </label>
+              <TimePicker
+                value={dueTime}
+                onChange={setDueTime}
+                onClear={() => setDueTime("")}
+              />
+            </div>
+          )}
+
+          <div className="flex space-x-3 pt-4" style={{paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0px))`}}>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-4 border border-muted text-tertiary rounded-lg font-medium hover:bg-secondary touch-manipulation transition-colors min-h-[48px]"
+              className="flex-1 px-4 py-3 border border-muted text-tertiary rounded-lg font-medium hover:bg-secondary touch-manipulation transition-colors min-h-[48px]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!title.trim() || !selectedOption}
-              className={`flex-1 px-4 py-4 rounded-lg font-medium touch-manipulation transition-opacity min-h-[48px] ${
+              className={`flex-1 px-4 py-3 rounded-lg font-medium touch-manipulation transition-opacity min-h-[48px] ${
                 title.trim() && selectedOption
                   ? 'bg-primary text-white hover:opacity-90' 
                   : 'bg-muted text-tertiary cursor-not-allowed opacity-50'

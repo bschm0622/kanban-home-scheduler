@@ -1,102 +1,105 @@
 import { useState, useEffect } from "react";
 import type { TaskStatus } from "../types/index";
+import TimePicker from "./TimePicker";
 
 interface TaskScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSchedule: (status: TaskStatus, weekId: string) => void;
+  onSchedule: (status: TaskStatus, weekId: string, dueTime?: string) => void;
   currentStatus: TaskStatus;
   currentTaskWeekId?: string;
   currentWeekId: string;
   nextWeekId: string;
   taskTitle?: string;
+  taskDueTime?: string;
 }
 
-export default function TaskScheduleModal({ 
-  isOpen, 
-  onClose, 
-  onSchedule, 
-  currentStatus,
-  currentTaskWeekId,
-  currentWeekId,
-  nextWeekId,
-  taskTitle
+const DAY_ABBREVS: Record<string, string> = {
+  sunday: "Su", monday: "Mo", tuesday: "Tu", wednesday: "We",
+  thursday: "Th", friday: "Fr", saturday: "Sa",
+};
+
+export default function TaskScheduleModal({
+  isOpen, onClose, onSchedule, currentStatus, currentTaskWeekId,
+  currentWeekId, nextWeekId, taskTitle, taskDueTime,
 }: TaskScheduleModalProps) {
-  // Smart default: pre-select current assignment unless it's completed
   const getInitialSelection = () => {
     if (currentStatus === "completed") return null;
     if (currentStatus === "backlog") return { value: "backlog" as TaskStatus, weekId: "" };
-    // For day statuses, use the task's actual weekId
     return { value: currentStatus, weekId: currentTaskWeekId || currentWeekId };
   };
 
   const [selectedOption, setSelectedOption] = useState<{value: TaskStatus, weekId: string} | null>(getInitialSelection());
+  const [dueTime, setDueTime] = useState(taskDueTime || "");
 
-  // Get today's date in user's local timezone for comparison
   const today = new Date();
   const todayYear = today.getFullYear();
   const todayMonth = today.getMonth();
   const todayDay = today.getDate();
+  const todayDayName = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][today.getDay()];
 
-  // Reset selection when modal opens
+  // Tomorrow
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowDayName = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][tomorrow.getDay()];
+
+  // Determine which weekId tomorrow falls in
+  const getTomorrowWeekId = () => {
+    const tomorrowSunday = new Date(tomorrow);
+    tomorrowSunday.setDate(tomorrowSunday.getDate() - tomorrowSunday.getDay());
+    const y = tomorrowSunday.getFullYear();
+    const m = String(tomorrowSunday.getMonth() + 1).padStart(2, '0');
+    const d = String(tomorrowSunday.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   useEffect(() => {
     if (isOpen) {
       setSelectedOption(getInitialSelection());
+      setDueTime(taskDueTime || "");
     }
-  }, [isOpen, currentStatus, currentWeekId]);
+  }, [isOpen, currentStatus, currentWeekId, taskDueTime]);
 
-  // Calculate dates for a specific week
   const getWeekDates = (weekId: string) => {
-    const sunday = new Date(weekId);
-    
-    const dates: Array<{value: TaskStatus, label: string, weekId: string}> = [
-      { value: "backlog", label: "Backlog", weekId: "" }
-    ];
-    
+    const [y, m, d] = weekId.split('-').map(Number);
+    const sunday = new Date(y, m - 1, d);
+
     const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
-    const dayLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    
-    dayNames.forEach((day, index) => {
+
+    return dayNames.map((day, index) => {
       const date = new Date(sunday);
       date.setDate(sunday.getDate() + index);
       const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      dates.push({
-        value: day,
-        label: `${dayLabels[index]} (${dateStr})`,
-        weekId: weekId
-      });
+      return { value: day as TaskStatus, label: dateStr, weekId, date };
     });
-    
-    return dates;
   };
 
   const currentWeekOptions = getWeekDates(currentWeekId);
   const nextWeekOptions = getWeekDates(nextWeekId);
-  
-  // Combine options with week labels
-  const allOptions = [
-    { value: "backlog", label: "Backlog", weekId: "" },
-    ...currentWeekOptions.slice(1).map(opt => ({ ...opt, label: `${opt.label} - This Week` })),
-    ...nextWeekOptions.slice(1).map(opt => ({ ...opt, label: `${opt.label} - Next Week` }))
-  ];
+
+  const isDateInPast = (date: Date) => {
+    return date.getFullYear() < todayYear ||
+      (date.getFullYear() === todayYear && date.getMonth() < todayMonth) ||
+      (date.getFullYear() === todayYear && date.getMonth() === todayMonth && date.getDate() < todayDay);
+  };
 
   if (!isOpen) return null;
 
   const handleSchedule = () => {
     if (selectedOption) {
-      onSchedule(selectedOption.value, selectedOption.weekId);
+      onSchedule(selectedOption.value, selectedOption.weekId, dueTime || undefined);
     }
     onClose();
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
+    if (e.target === e.currentTarget) onClose();
   };
 
+  const tomorrowWeekId = getTomorrowWeekId();
+
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center sm:justify-center p-4 z-50"
       onClick={handleBackdropClick}
     >
@@ -104,44 +107,50 @@ export default function TaskScheduleModal({
         <div className="p-4 border-b border-muted">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">Schedule Task</h2>
-            <button
-              onClick={onClose}
-              className="text-tertiary hover:text-foreground text-2xl leading-none"
-            >
-              ×
-            </button>
+            <button onClick={onClose} className="text-tertiary hover:text-foreground text-2xl leading-none">×</button>
           </div>
           {taskTitle && (
-            <div className="mt-2 p-2 bg-muted/30 rounded text-sm text-foreground font-medium">
-              {taskTitle}
-            </div>
+            <div className="mt-2 p-2 bg-muted/30 rounded text-sm text-foreground font-medium">{taskTitle}</div>
           )}
           {currentStatus === "completed" && (
             <div className="mt-2 p-2 bg-accent/10 border border-accent/20 rounded text-sm text-accent">
-              ⚠️ This will reopen the completed task. Choose where to reschedule it.
+              This will reopen the completed task.
             </div>
           )}
         </div>
 
         <div className="p-4 space-y-4">
-          {/* Backlog Option */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-3">
-              Schedule for
-            </label>
+          {/* Quick Actions */}
+          <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => setSelectedOption({ value: "backlog", weekId: "" })}
-              className={`w-full p-2 rounded-lg border text-center transition-colors touch-manipulation min-h-[44px] relative ${
-                selectedOption?.value === "backlog" 
-                  ? 'border-primary bg-primary/10 text-primary' 
-                  : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
+              className={`p-2.5 rounded-lg border text-center transition-colors touch-manipulation min-h-[44px] ${
+                selectedOption?.value === "backlog"
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-muted text-foreground hover:border-primary/50'
               }`}
             >
-              <div className="font-medium flex items-center justify-center gap-1">
-                Backlog
-                {currentStatus === "backlog" && <span className="text-xs">•</span>}
-              </div>
-              <div className="text-xs opacity-70">Not scheduled</div>
+              <div className="text-xs font-medium">Backlog</div>
+            </button>
+            <button
+              onClick={() => setSelectedOption({ value: todayDayName as TaskStatus, weekId: currentWeekId })}
+              className={`p-2.5 rounded-lg border text-center transition-colors touch-manipulation min-h-[44px] ${
+                selectedOption?.value === todayDayName && selectedOption?.weekId === currentWeekId
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-blue-500 border-2 text-foreground hover:bg-blue-50 dark:hover:bg-blue-900/20'
+              }`}
+            >
+              <div className="text-xs font-bold">Today</div>
+            </button>
+            <button
+              onClick={() => setSelectedOption({ value: tomorrowDayName as TaskStatus, weekId: tomorrowWeekId })}
+              className={`p-2.5 rounded-lg border text-center transition-colors touch-manipulation min-h-[44px] ${
+                selectedOption?.value === tomorrowDayName && selectedOption?.weekId === tomorrowWeekId
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-muted text-foreground hover:border-primary/50'
+              }`}
+            >
+              <div className="text-xs font-medium">Tomorrow</div>
             </button>
           </div>
 
@@ -149,37 +158,34 @@ export default function TaskScheduleModal({
           <div>
             <h3 className="text-sm font-medium text-foreground mb-2">This Week</h3>
             <div className="grid grid-cols-7 gap-1">
-              {currentWeekOptions.slice(1).map((option) => {
-                // Parse weekId as local date (not UTC)
-                const [year, month, day] = option.weekId.split('-').map(Number);
-                const sunday = new Date(year, month - 1, day); // month is 0-indexed
-                const dayIndex = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(option.value);
-                const optionDate = new Date(sunday);
-                optionDate.setDate(sunday.getDate() + dayIndex);
-                
-                const isToday = optionDate.getFullYear() === todayYear && 
-                               optionDate.getMonth() === todayMonth && 
-                               optionDate.getDate() === todayDay;
+              {currentWeekOptions.map((option) => {
+                const isToday = option.date.getFullYear() === todayYear &&
+                  option.date.getMonth() === todayMonth &&
+                  option.date.getDate() === todayDay;
+                const isPast = isDateInPast(option.date);
                 const isSelected = selectedOption?.value === option.value && selectedOption?.weekId === option.weekId;
                 const isCurrentlyScheduled = currentStatus === option.value && currentTaskWeekId === option.weekId;
-                
+
                 return (
                   <button
                     key={`current-${option.value}`}
-                    onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
+                    onClick={() => !isPast && setSelectedOption({ value: option.value, weekId: option.weekId })}
+                    disabled={isPast}
                     className={`p-2 rounded-md transition-colors touch-manipulation min-h-[44px] text-center ${
-                      isSelected
-                        ? 'border-primary bg-primary/10 text-primary' 
+                      isPast
+                        ? 'opacity-30 cursor-not-allowed border-muted text-tertiary'
+                        : isSelected
+                        ? 'border-primary bg-primary/10 text-primary'
                         : isToday
                         ? 'border-blue-500 border-2 text-foreground hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                         : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
                     }`}
                   >
                     <div className="text-xs font-medium flex items-center justify-center gap-0.5">
-                      {option.value.charAt(0).toUpperCase()}
+                      {DAY_ABBREVS[option.value]}
                       {isCurrentlyScheduled && <span className="text-xs">•</span>}
                     </div>
-                    <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
+                    <div className="text-xs opacity-70">{option.label.split(' ')[1]}</div>
                   </button>
                 );
               })}
@@ -190,41 +196,44 @@ export default function TaskScheduleModal({
           <div>
             <h3 className="text-sm font-medium text-foreground mb-2">Next Week</h3>
             <div className="grid grid-cols-7 gap-1">
-              {nextWeekOptions.slice(1).map((option) => {
-                // Parse weekId as local date (not UTC)
-                const [year, month, day] = option.weekId.split('-').map(Number);
-                const sunday = new Date(year, month - 1, day); // month is 0-indexed
-                const dayIndex = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(option.value);
-                const optionDate = new Date(sunday);
-                optionDate.setDate(sunday.getDate() + dayIndex);
-                const isToday = optionDate.getFullYear() === todayYear && 
-                               optionDate.getMonth() === todayMonth && 
-                               optionDate.getDate() === todayDay;
+              {nextWeekOptions.map((option) => {
                 const isSelected = selectedOption?.value === option.value && selectedOption?.weekId === option.weekId;
                 const isCurrentlyScheduled = currentStatus === option.value && currentTaskWeekId === option.weekId;
-                
+
                 return (
                   <button
                     key={`next-${option.value}`}
                     onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
                     className={`p-2 rounded-md transition-colors touch-manipulation min-h-[44px] text-center ${
                       isSelected
-                        ? 'border-primary bg-primary/10 text-primary' 
-                        : isToday
-                        ? 'border-blue-500 border-2 text-foreground hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        ? 'border-primary bg-primary/10 text-primary'
                         : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
                     }`}
                   >
                     <div className="text-xs font-medium flex items-center justify-center gap-0.5">
-                      {option.value.charAt(0).toUpperCase()}
+                      {DAY_ABBREVS[option.value]}
                       {isCurrentlyScheduled && <span className="text-xs">•</span>}
                     </div>
-                    <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
+                    <div className="text-xs opacity-70">{option.label.split(' ')[1]}</div>
                   </button>
                 );
               })}
             </div>
           </div>
+
+          {/* Due Time */}
+          {selectedOption && selectedOption.value !== "backlog" && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Reminder <span className="text-tertiary font-normal">(Slack notification)</span>
+              </label>
+              <TimePicker
+                value={dueTime}
+                onChange={setDueTime}
+                onClear={() => setDueTime("")}
+              />
+            </div>
+          )}
 
           <div className="flex space-x-3 pt-2" style={{paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0px))`}}>
             <button
@@ -237,8 +246,8 @@ export default function TaskScheduleModal({
               onClick={handleSchedule}
               disabled={!selectedOption}
               className={`flex-1 px-4 py-3 rounded-lg font-medium touch-manipulation transition-opacity min-h-[48px] ${
-                selectedOption 
-                  ? 'bg-primary text-white hover:opacity-90' 
+                selectedOption
+                  ? 'bg-primary text-white hover:opacity-90'
                   : 'bg-muted text-tertiary cursor-not-allowed'
               }`}
             >

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import confetti from "canvas-confetti";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { Task, TaskStatus } from "../types";
@@ -9,20 +9,33 @@ interface TaskCardProps {
   onComplete: (taskId: Id<"tasks">) => void;
   onDelete: (taskId: Id<"tasks">) => void;
   onEdit: (taskId: Id<"tasks">) => void;
-  onSchedule: (taskId: Id<"tasks">) => void;
 }
 
-export default function TaskCard({ task, onStatusChange, onComplete, onDelete, onEdit, onSchedule }: TaskCardProps) {
-  const [showActions, setShowActions] = useState(false);
+function formatTime12h(time24: string): string {
+  const [h, m] = time24.split(':').map(Number);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const hours = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hours}:${String(m).padStart(2, '0')} ${suffix}`;
+}
 
-  const handleComplete = (e: React.MouseEvent) => {
+const SWIPE_THRESHOLD = 80;
+
+export default function TaskCard({ task, onStatusChange, onComplete, onDelete, onEdit }: TaskCardProps) {
+  const [showActions, setShowActions] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const touchStartX = useRef(0);
+  const touchCurrentX = useRef(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const isSwiping = useRef(false);
+  const hapticFired = useRef(false);
+
+  const handleComplete = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
 
-    // Trigger confetti
     const colors = {
-      high: ['#ef4444', '#dc2626', '#b91c1c'], // red shades
-      medium: ['#eab308', '#ca8a04', '#a16207'], // yellow shades
-      low: ['#22c55e', '#16a34a', '#15803d'], // green shades
+      high: ['#ef4444', '#dc2626', '#b91c1c'],
+      medium: ['#eab308', '#ca8a04', '#a16207'],
+      low: ['#22c55e', '#16a34a', '#15803d'],
     };
 
     confetti({
@@ -33,94 +46,168 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
       scalar: 0.8,
     });
 
-    // Haptic feedback on mobile
-    if (navigator.vibrate) {
-      navigator.vibrate(10);
-    }
-
-    // Call the complete handler
+    if (navigator.vibrate) navigator.vibrate(10);
     onComplete(task._id);
   };
 
+  // Swipe gesture handlers — attached natively with { passive: false }
+  // so preventDefault() actually works to stop page-level swipe navigation
+  const onTouchStartCb = useCallback((e: TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchCurrentX.current = e.touches[0].clientX;
+    isSwiping.current = false;
+    hapticFired.current = false;
+    setSwipeDirection(null);
+  }, []);
+
+  const onTouchMoveCb = useCallback((e: TouchEvent) => {
+    touchCurrentX.current = e.touches[0].clientX;
+    const deltaX = touchCurrentX.current - touchStartX.current;
+
+    if (Math.abs(deltaX) > 10) {
+      isSwiping.current = true;
+      setSwipeDirection(deltaX > 0 ? 'right' : 'left');
+    }
+
+    if (isSwiping.current && cardRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      const clampedDelta = Math.max(-150, Math.min(150, deltaX));
+      cardRef.current.style.transform = `translateX(${clampedDelta}px)`;
+      cardRef.current.style.transition = 'none';
+
+      if (!hapticFired.current && Math.abs(deltaX) > SWIPE_THRESHOLD) {
+        if (navigator.vibrate) navigator.vibrate(10);
+        hapticFired.current = true;
+      }
+    }
+  }, []);
+
+  const onTouchEndCb = useCallback(() => {
+    const deltaX = touchCurrentX.current - touchStartX.current;
+
+    if (cardRef.current) {
+      cardRef.current.style.transition = 'transform 0.3s ease';
+      cardRef.current.style.transform = 'translateX(0)';
+    }
+
+    if (isSwiping.current) {
+      if (deltaX > SWIPE_THRESHOLD && task.status !== 'completed') {
+        handleComplete({ stopPropagation: () => {} } as any);
+      } else if (deltaX < -SWIPE_THRESHOLD) {
+        onEdit(task._id);
+      }
+    }
+
+    isSwiping.current = false;
+    setSwipeDirection(null);
+  }, [task.status, task._id, onEdit]);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    el.addEventListener('touchstart', onTouchStartCb, { passive: true });
+    el.addEventListener('touchmove', onTouchMoveCb, { passive: false });
+    el.addEventListener('touchend', onTouchEndCb, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStartCb);
+      el.removeEventListener('touchmove', onTouchMoveCb);
+      el.removeEventListener('touchend', onTouchEndCb);
+    };
+  }, [onTouchStartCb, onTouchMoveCb, onTouchEndCb]);
+
+  const handleCardClick = () => {
+    if (!isSwiping.current) {
+      setShowActions(!showActions);
+    }
+  };
+
   return (
-    <div 
-      className={`task-card priority-${task.priority}`}
-      onClick={() => setShowActions(!showActions)}
-    >
-      <div className="task-content">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-medium text-foreground text-sm leading-snug">{task.title}</h3>
-              {task.isCommitment && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-medium flex-shrink-0" title="Weekly Commitment">
-                  📌
-                </span>
-              )}
+    <div className="relative overflow-hidden rounded-lg">
+      {/* Swipe backgrounds - only visible during active swipe */}
+      {swipeDirection && (
+        <div className="absolute inset-0 flex">
+          {swipeDirection === 'right' && (
+            <div className="flex-1 bg-green-500 flex items-center pl-4">
+              <span className="text-white text-lg font-bold">✓</span>
             </div>
-            {task.description && (
-              <p className="text-xs text-tertiary mt-1 leading-relaxed">{task.description}</p>
-            )}
-          </div>
-          <div className="flex items-center ml-2">
-            {/* Quick complete button - hide if already completed */}
-            {task.status !== 'completed' && (
-              <button
-                onClick={handleComplete}
-                className="w-5 h-5 rounded border-2 border-muted hover:border-green-500 flex items-center justify-center text-muted hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                title="Mark as complete"
-              >
-                ✓
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      {showActions && (
-        <div className="task-actions">
-          <div className="task-action-grid mt-2" style={{gridTemplateColumns: 'repeat(3, 1fr)'}}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSchedule(task._id);
-              }}
-              className="action-button day flex items-center justify-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor" className="mr-1">
-                <path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm280 240q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-160 0q-17 0-28.5-11.5T280-440q0-17 11.5-28.5T320-480q17 0 28.5 11.5T360-440q0 17-11.5 28.5T320-400Zm320 0q-17 0-28.5-11.5T520-440q0-17 11.5-28.5T560-480q17 0 28.5 11.5T600-440q0 17-11.5 28.5T560-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-160 0q-17 0-28.5-11.5T280-280q0-17 11.5-28.5T320-320q17 0 28.5 11.5T360-280q0 17-11.5 28.5T320-240Zm320 0q-17 0-28.5-11.5T520-280q0-17 11.5-28.5T560-320q17 0 28.5 11.5T600-280q0 17-11.5 28.5T560-240Z"/>
-              </svg>
-              Schedule
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(task._id);
-              }}
-              className="action-button day flex items-center justify-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor" className="mr-1">
-                <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
-              </svg>
-              Edit
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm('Delete this task?')) {
-                  onDelete(task._id);
-                }
-              }}
-              className="action-button day text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor" className="mr-1">
-                <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
-              </svg>
-              Delete
-            </button>
-          </div>
+          )}
+          {swipeDirection === 'left' && (
+            <div className="flex-1 bg-blue-500 flex items-center justify-end pr-4">
+              <span className="text-white text-sm font-bold">Edit</span>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Card content */}
+      <div
+        ref={cardRef}
+        className={`task-card priority-${task.priority} relative z-10`}
+        onClick={handleCardClick}
+      >
+        <div className="task-content">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium text-foreground text-sm leading-snug">{task.title}</h3>
+                {task.isCommitment && (
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-medium flex-shrink-0" title="Weekly Commitment">
+                    📌
+                  </span>
+                )}
+              </div>
+              {task.description && (
+                <p className="text-xs text-tertiary mt-1 leading-relaxed">{task.description}</p>
+              )}
+              {task.dueTime && (
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1">
+                  ⏰ {formatTime12h(task.dueTime)}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center ml-2">
+              {task.status !== 'completed' && (
+                <button
+                  onClick={handleComplete}
+                  className="w-5 h-5 rounded border-2 border-muted hover:border-green-500 flex items-center justify-center text-muted hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                  title="Mark as complete"
+                >
+                  ✓
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {showActions && (
+          <div className="task-actions">
+            <div className="task-action-grid mt-2" style={{gridTemplateColumns: 'repeat(2, 1fr)'}}>
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(task._id); }}
+                className="action-button day flex items-center justify-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor" className="mr-1">
+                  <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
+                </svg>
+                Edit
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(task._id);
+                }}
+                className="action-button day text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor" className="mr-1">
+                  <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+                </svg>
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

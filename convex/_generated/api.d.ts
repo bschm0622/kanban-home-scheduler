@@ -14,7 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as crons from "../crons.js";
-import type * as history from "../history.js";
+import type * as lib_timezone from "../lib/timezone.js";
 import type * as recurringTasks from "../recurringTasks.js";
 import type * as slackNotifications from "../slackNotifications.js";
 import type * as streaks from "../streaks.js";
@@ -33,7 +33,7 @@ import type * as weeklyReview from "../weeklyReview.js";
  */
 declare const fullApi: ApiFromModules<{
   crons: typeof crons;
-  history: typeof history;
+  "lib/timezone": typeof lib_timezone;
   recurringTasks: typeof recurringTasks;
   slackNotifications: typeof slackNotifications;
   streaks: typeof streaks;

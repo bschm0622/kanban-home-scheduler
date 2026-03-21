@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { RecurringTask } from "../types";
+import TimePicker from "./TimePicker";
 
 interface RecurringTaskEditModalProps {
   isOpen: boolean;
@@ -14,7 +15,8 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
     title: "",
     description: "",
     priority: "medium" as "low" | "medium" | "high",
-    preferredDay: "" as "" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+    preferredDay: "" as "" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday",
+    dueTime: "" as string,
   });
   
   const updateRecurringTask = useMutation(api.recurringTasks.updateRecurringTask);
@@ -25,7 +27,8 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
         title: recurringTask.title,
         description: recurringTask.description || "",
         priority: recurringTask.priority,
-        preferredDay: recurringTask.preferredDay || ""
+        preferredDay: recurringTask.preferredDay || "",
+        dueTime: recurringTask.dueTime || "",
       });
     }
   }, [recurringTask, isOpen]);
@@ -41,6 +44,7 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
         description: formData.description.trim() || undefined,
         priority: formData.priority,
         preferredDay: formData.preferredDay || undefined,
+        dueTime: formData.dueTime || undefined,
       });
       
       onClose();
@@ -59,7 +63,7 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
             <h2 className="text-lg font-semibold text-foreground">Edit Recurring Task</h2>
             <button
               onClick={onClose}
-              className="text-tertiary hover:text-foreground text-xl leading-none"
+              className="text-tertiary hover:text-foreground text-2xl leading-none"
             >
               ×
             </button>
@@ -69,7 +73,7 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Task Title *
               </label>
               <input
@@ -83,7 +87,7 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Description
               </label>
               <textarea
@@ -96,14 +100,14 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Priority
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { value: "low", label: "Low", color: "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-700 dark:text-green-300" },
-                  { value: "medium", label: "Medium", color: "bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-700 dark:text-yellow-300" },
-                  { value: "high", label: "High", color: "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-700 dark:text-red-300" }
+                  { value: "low", label: "Low", color: "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-700 dark:text-green-200" },
+                  { value: "medium", label: "Medium", color: "bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-700 dark:text-yellow-200" },
+                  { value: "high", label: "High", color: "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-700 dark:text-red-200" }
                 ].map(({ value, label, color }) => (
                   <label key={value} className="cursor-pointer">
                     <input
@@ -115,7 +119,7 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
                       className="sr-only"
                     />
                     <div className={`p-3 border-2 rounded-lg text-center text-sm font-medium ${
-                      formData.priority === value ? color : "bg-surface border-muted text-tertiary"
+                      formData.priority === value ? color : "bg-secondary border-muted text-tertiary"
                     }`}>
                       {label}
                     </div>
@@ -125,7 +129,7 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Preferred Day (Optional)
               </label>
               <select
@@ -143,6 +147,19 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
                 <option value="sunday">Sunday</option>
               </select>
             </div>
+
+            {formData.preferredDay && (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Reminder Time (Optional)
+                </label>
+                <TimePicker
+                  value={formData.dueTime}
+                  onChange={(time) => setFormData({...formData, dueTime: time})}
+                  onClear={() => setFormData({...formData, dueTime: ""})}
+                />
+              </div>
+            )}
           </div>
 
           <div className="p-4 border-t border-muted flex-shrink-0" style={{paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0px))`}}>
@@ -150,16 +167,16 @@ export default function RecurringTaskEditModal({ isOpen, recurringTask, onClose 
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-4 bg-muted/30 text-tertiary rounded-lg font-medium hover:bg-muted/50 touch-manipulation transition-colors min-h-[48px]"
+                className="flex-1 px-4 py-3 border border-muted text-tertiary rounded-lg font-medium hover:bg-secondary touch-manipulation transition-colors min-h-[48px]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!formData.title.trim()}
-                className="flex-1 px-4 py-4 bg-primary text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation transition-opacity min-h-[48px]"
+                className="flex-1 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation transition-opacity min-h-[48px]"
               >
-                Update Task
+                Save
               </button>
             </div>
           </div>

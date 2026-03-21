@@ -3,35 +3,46 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// Morning notification - 9:00 AM EST
+// Morning briefing - 9:00 AM EST (14:00 UTC)
+// Shows today's tasks + yesterday's unfinished items
 crons.daily(
-  "send daily tasks to slack",
-  { hourUTC: 14, minuteUTC: 0 }, // 9:00 AM EST = 14:00 UTC
+  "morning briefing",
+  { hourUTC: 14, minuteUTC: 0 },
   internal.slackNotifications.sendScheduledDailyTasks,
   {}
 );
 
-// End of day summary - 8:00 PM EST
-crons.daily(
-  "end of day summary",
-  { hourUTC: 1, minuteUTC: 0 }, // 8:00 PM EST = 01:00 UTC next day
-  internal.slackNotifications.sendEndOfDaySummary,
-  {}
-);
-
-// Streak protection alert - 7:00 PM EST
-crons.daily(
-  "streak protection alert",
-  { hourUTC: 0, minuteUTC: 0 }, // 7:00 PM EST = 00:00 UTC next day
-  internal.slackNotifications.sendStreakAlert,
-  {}
-);
-
-// Weekly recap - Sunday 9:00 PM EST
+// Weekly recap - Sunday 9:00 PM EST (Monday 02:00 UTC)
 crons.weekly(
   "weekly recap",
-  { hourUTC: 2, minuteUTC: 0, dayOfWeek: "sunday" }, // Sunday 9:00 PM EST = Monday 02:00 UTC
+  { hourUTC: 2, minuteUTC: 0, dayOfWeek: "sunday" },
   internal.slackNotifications.sendWeeklyRecap,
+  {}
+);
+
+// Auto-rollover - Monday 3:00 AM EST (Monday 08:00 UTC)
+// Moves incomplete tasks from past weeks to backlog
+crons.weekly(
+  "auto rollover",
+  { hourUTC: 8, minuteUTC: 0, dayOfWeek: "monday" },
+  internal.weekManager.cronAutoRollover,
+  {}
+);
+
+// Auto-generate recurring tasks - Monday 4:00 AM EST (Monday 09:00 UTC)
+// Creates task instances from active recurring task templates
+crons.weekly(
+  "auto generate recurring tasks",
+  { hourUTC: 9, minuteUTC: 0, dayOfWeek: "monday" },
+  internal.recurringTasks.autoGenerateRecurringTasks,
+  {}
+);
+
+// Permanently delete soft-deleted tasks older than 24h - daily 3:00 AM EST (08:00 UTC)
+crons.daily(
+  "cleanup deleted tasks",
+  { hourUTC: 8, minuteUTC: 0 },
+  internal.tasks.permanentlyDeleteOldTasks,
   {}
 );
 

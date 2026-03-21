@@ -39,11 +39,10 @@ const shouldLoadAnalytics =
     import.meta.env.PROD && !Astro.url.pathname.startsWith("/admin");
 ---
 
-<!-- Theme mode initialization with debug logs -->
+<!-- Theme mode initialization -->
 <script is:inline>
     (function() {
         let theme = localStorage.getItem("theme");
-        console.log('[BaseHead] Initial localStorage theme:', theme);
         if (!theme) {
             if (
                 window.matchMedia &&
@@ -54,12 +53,11 @@ const shouldLoadAnalytics =
                 theme = "light";
             }
             localStorage.setItem("theme", theme);
-            console.log('[BaseHead] Set theme in localStorage to:', theme);
         }
         document.documentElement.classList.remove("light", "dark");
         document.documentElement.classList.add(theme);
-        console.log('[BaseHead] Applied theme class to <html>:', theme);
-        console.log('[BaseHead] localStorage theme after script:', localStorage.getItem("theme"));
+        var themeColor = theme === 'dark' ? '#111827' : '#ffffff';
+        document.querySelectorAll('meta[name="theme-color"]').forEach(function(el) { el.setAttribute('content', themeColor); });
     })();
 </script>
 
@@ -68,7 +66,7 @@ const shouldLoadAnalytics =
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, user-scalable=yes"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes"
 />
 <meta name="format-detection" content="telephone=no" />
 <meta name="HandheldFriendly" content="True" />
@@ -82,7 +80,8 @@ const shouldLoadAnalytics =
 <meta name="description" content={description} />
 <meta name="robots" content="index, follow" />
 <meta name="author" content={SITE.author} />
-<meta name="theme-color" content="#ffffff" />
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)" />
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website" />
@@ -101,8 +100,7 @@ const shouldLoadAnalytics =
 <!-- Canonical -->
 <link rel="canonical" href={canonicalStr} />
 
-<!-- Manifest + Sitemap -->
-<link rel="manifest" href="/site.webmanifest" />
+<!-- Sitemap (manifest is injected by @vite-pwa/astro) -->
 <link rel="sitemap" href="/sitemap-index.xml" />
 
 <Font cssVariable="--font-roboto" preload />

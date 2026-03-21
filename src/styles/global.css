@@ -143,6 +143,7 @@
 
 .app-header {
     @apply bg-surface/80 backdrop-blur-sm border-b border-muted/50 px-4 py-2 flex-shrink-0;
+    padding-top: calc(0.5rem + env(safe-area-inset-top, 0px));
 }
 
 .kanban-columns {
@@ -150,7 +151,7 @@
 }
 
 .kanban-column {
-    @apply bg-surface rounded-xl border border-muted/30;
+    @apply bg-surface rounded-lg border border-muted/30;
 }
 
 .kanban-column.today {
@@ -175,6 +176,7 @@
 
 .task-card {
     @apply bg-surface border border-muted/20 rounded-lg mx-3 mb-2 touch-manipulation transition-all duration-200;
+    touch-action: pan-y;
 }
 
 .task-card:hover {
@@ -240,27 +242,8 @@
 }
 
 .bottom-nav {
-    @apply fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-sm border-t border-muted/50;
+    @apply fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-sm border-t border-muted/50 z-50;
     padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
-}
-
-.bottom-nav-grid {
-    @apply grid grid-cols-4 gap-3 max-w-md mx-auto;
-}
-
-.nav-button {
-    @apply rounded-xl text-center touch-manipulation transition-colors flex flex-col items-center gap-1;
-    min-height: 48px;
-    min-width: 48px;
-    padding: 0.75rem;
-}
-
-.nav-button.primary {
-    @apply bg-primary text-white;
-}
-
-.nav-button.secondary {
-    @apply bg-muted/30 text-tertiary hover:bg-muted/50;
 }
 
 /* Form input improvements */
@@ -271,9 +254,14 @@ select {
     @apply text-foreground placeholder:text-tertiary;
 }
 
-input[type="text"]:focus, 
-input[type="email"]:focus, 
-textarea:focus, 
+input[type="text"]:focus,
+input[type="email"]:focus,
+textarea:focus,
 select:focus {
     @apply text-foreground;
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }

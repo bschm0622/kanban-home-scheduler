@@ -8,21 +8,20 @@ import { getCurrentWeekId, getNextWeekId, getWeekDates, getWeekRange } from "../
 import { groupTasksByStatus } from "../utils/taskUtils";
 import TaskForm from "./TaskForm";
 import TaskEditModal from "./TaskEditModal";
-import TaskScheduleModal from "./TaskScheduleModal";
+
 import RecurringTasksModal from "./RecurringTasksModal";
-import HistoryModal from "./HistoryModal";
 import WeeklyReviewModal from "./WeeklyReviewModal";
 import TaskColumn from "./TaskColumn";
-import PWAInstallPrompt, { useAppVisitTracker } from "./PWAInstallPrompt";
 import AppHeader from "./AppHeader";
-import MilestoneModal from "./MilestoneModal";
+import UndoToast from "./UndoToast";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
 
 const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
 export default function KanbanBoard() {
   const { user } = useUser();
-  useAppVisitTracker(); // Track app visits for PWA prompt logic
-  
+  const { scrollRef, pullDistance, refreshing } = usePullToRefresh();
+
   // Week view state - true for current week, false for next week
   const [viewingCurrentWeek, setViewingCurrentWeek] = useState(true);
   
@@ -43,25 +42,25 @@ export default function KanbanBoard() {
   const shouldShowWeeklyReview = useQuery(api.weeklyReview.shouldShowWeeklyReview);
 
   const updateTaskStatus = useMutation(api.tasks.updateTaskStatus);
-  const scheduleTaskToWeek = useMutation(api.tasks.scheduleTaskToWeek);
+
   const updateTask = useMutation(api.tasks.updateTask);
   const completeTask = useMutation(api.tasks.completeTask);
   const deleteTask = useMutation(api.tasks.deleteTask);
-  const resetWeek = useMutation(api.tasks.resetWeek);
+  const restoreTask = useMutation(api.tasks.restoreTask);
   const autoRollover = useMutation(api.weekManager.autoRolloverPreviousWeeks);
   const [showNewTask, setShowNewTask] = useState(false);
   const [showEditTask, setShowEditTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [showScheduleTask, setShowScheduleTask] = useState(false);
-  const [schedulingTask, setSchedulingTask] = useState<Task | null>(null);
-  const [showRolloverConfirm, setShowRolloverConfirm] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   const [showWeeklyReview, setShowWeeklyReview] = useState(false);
   const [globalExpanded, setGlobalExpanded] = useState<boolean | null>(null);
   const [columnStates, setColumnStates] = useState<Record<string, boolean>>({});
-  const [showMilestone, setShowMilestone] = useState(false);
-  const [milestoneDay, setMilestoneDay] = useState<number>(0);
+  const [undoAction, setUndoAction] = useState<{
+    type: 'complete' | 'delete';
+    taskId: Id<"tasks">;
+    previousStatus?: TaskStatus;
+    previousWeekId?: string;
+  } | null>(null);
 
   // Calculate if all columns are expanded
   const allExpanded = Object.values(columnStates).length > 0 && Object.values(columnStates).every(expanded => expanded);
@@ -149,24 +148,55 @@ export default function KanbanBoard() {
   };
 
   const handleComplete = async (taskId: Id<"tasks">) => {
+    // Find task to save previous state for undo
+    const task = [...(data?.backlogTasks || []), ...(data?.weekTasks || [])].find(t => t._id === taskId);
     try {
-      const result = await completeTask({ taskId });
-
-      // Check if this was a milestone - delay showing modal to enjoy confetti first
-      if (result?.streakData?.isMilestone && result.streakData.milestoneDay) {
-        setMilestoneDay(result.streakData.milestoneDay);
-        // Wait 2 seconds to let confetti animation play
-        setTimeout(() => {
-          setShowMilestone(true);
-        }, 2000);
+      await completeTask({ taskId });
+      if (task) {
+        setUndoAction({
+          type: 'complete',
+          taskId,
+          previousStatus: task.status as TaskStatus,
+          previousWeekId: task.weekId,
+        });
       }
     } catch (error) {
-      // Handle error silently - task completion will fail and UI won't update
+      // Handle error silently
     }
   };
 
-  const handleDelete = (taskId: Id<"tasks">) => {
-    deleteTask({ taskId });
+  const handleDelete = async (taskId: Id<"tasks">) => {
+    const task = [...(data?.backlogTasks || []), ...(data?.weekTasks || [])].find(t => t._id === taskId);
+    try {
+      await deleteTask({ taskId });
+      if (task) {
+        setUndoAction({
+          type: 'delete',
+          taskId,
+          previousStatus: task.status as TaskStatus,
+          previousWeekId: task.weekId,
+        });
+      }
+    } catch (error) {
+      // Handle error silently
+    }
+  };
+
+  const handleUndo = async () => {
+    if (!undoAction) return;
+    try {
+      if (undoAction.type === 'complete') {
+        await updateTaskStatus({
+          taskId: undoAction.taskId,
+          newStatus: undoAction.previousStatus || 'backlog',
+        });
+      } else if (undoAction.type === 'delete') {
+        await restoreTask({ taskId: undoAction.taskId });
+      }
+    } catch (error) {
+      // Undo failed silently
+    }
+    setUndoAction(null);
   };
 
   const handleEdit = (taskId: Id<"tasks">) => {
@@ -174,42 +204,6 @@ export default function KanbanBoard() {
     if (task) {
       setEditingTask(task);
       setShowEditTask(true);
-    }
-  };
-
-  const handleSchedule = (taskId: Id<"tasks">) => {
-    const task = [...data.backlogTasks, ...data.weekTasks].find(t => t._id === taskId);
-    if (task) {
-      setSchedulingTask(task);
-      setShowScheduleTask(true);
-    }
-  };
-
-  const handleScheduleConfirm = async (newStatus: TaskStatus, weekId: string) => {
-    if (schedulingTask) {
-      try {
-        await scheduleTaskToWeek({ 
-          taskId: schedulingTask._id, 
-          newStatus,
-          weekId: weekId || undefined
-        });
-        setShowScheduleTask(false);
-        setSchedulingTask(null);
-      } catch (error) {
-        // Task scheduling failed - user will see stale UI state
-      }
-    }
-  };
-
-  const handleRolloverWeek = async () => {
-    try {
-      await resetWeek({ 
-        weekId: viewingWeekId 
-      });
-      setShowRolloverConfirm(false);
-      // Week reset successful - UI will update automatically
-    } catch (error) {
-      // Week reset failed - user will see stale UI state
     }
   };
 
@@ -239,7 +233,18 @@ export default function KanbanBoard() {
       />
 
       {/* Main scrollable content area */}
-      <div className="flex-1 overflow-y-auto" style={{paddingBottom: `calc(9rem + env(safe-area-inset-bottom, 0px))`}}>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{paddingBottom: `calc(6rem + env(safe-area-inset-bottom, 0px))`}}>
+        {/* Pull to refresh indicator */}
+        {pullDistance > 0 && (
+          <div
+            className="flex items-center justify-center overflow-hidden transition-opacity"
+            style={{ height: pullDistance, opacity: Math.min(pullDistance / 80, 1) }}
+          >
+            <div className={`w-6 h-6 border-2 border-primary border-t-transparent rounded-full ${refreshing ? 'animate-spin' : ''}`}
+              style={{ transform: refreshing ? undefined : `rotate(${pullDistance * 3}deg)` }}
+            />
+          </div>
+        )}
         {/* Backlog column - always visible */}
         <div className="px-4 py-3">
           <TaskColumn
@@ -249,7 +254,7 @@ export default function KanbanBoard() {
             onComplete={handleComplete}
             onDelete={handleDelete}
             onEdit={handleEdit}
-            onSchedule={handleSchedule}
+
             isBacklog={true}
             collapsible={true}
             globalExpanded={globalExpanded}
@@ -312,7 +317,7 @@ export default function KanbanBoard() {
             onComplete={handleComplete}
             onDelete={handleDelete}
             onEdit={handleEdit}
-            onSchedule={handleSchedule}
+
             isToday={viewingCurrentWeek && today === day}
             date={weekDates[day]}
             collapsible={true}
@@ -330,7 +335,7 @@ export default function KanbanBoard() {
             onComplete={handleComplete}
             onDelete={handleDelete}
             onEdit={handleEdit}
-            onSchedule={handleSchedule}
+
             isCompleted={true}
             collapsible={true}
             globalExpanded={globalExpanded}
@@ -344,38 +349,22 @@ export default function KanbanBoard() {
 
       {/* Bottom navigation */}
       <div className="bottom-nav">
-        <div className="bottom-nav-grid">
-          <button 
+        <div className="flex gap-3 max-w-md mx-auto">
+          <button
             onClick={() => setShowRecurring(true)}
-            className="nav-button secondary"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-muted/30 text-tertiary hover:bg-muted/50 touch-manipulation transition-colors min-h-[44px]"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor">
               <path d="M280-80 120-240l160-160 56 58-62 62h406v-160h80v240H274l62 62-56 58Zm-80-440v-240h486l-62-62 56-58 160 160-160 160-56-58 62-62H280v160h-80Z"/>
             </svg>
-            <span className="text-xs">Recurring</span>
+            <span className="text-sm font-medium">Recurring</span>
           </button>
-          <button 
-            onClick={() => setShowHistory(true)}
-            className="nav-button secondary"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
-              <path d="M480-120q-138 0-240.5-91.5T122-440h82q14 104 92.5 172T480-200q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h110v80H120v-240h80v94q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z"/>
-            </svg>
-            <span className="text-xs">History</span>
-          </button>
-          <button 
-            onClick={() => setShowRolloverConfirm(true)}
-            className="nav-button secondary"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-250q78 0 134-56t56-134q0-78-56-134t-134-56q-38 0-71 14t-59 38v-62h-60v170h170v-60h-72q17-18 41-29t51-11q54 0 92 38t38 92q0 54-38 92t-92 38q-44 0-77-25.5T356-400h-62q14 65 65.5 107.5T480-250ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-446L526-800H240v640Zm0 0v-640 640Z" /></svg>
-            <span className="text-xs">Reset</span>
-          </button>
-          <button 
+          <button
             onClick={() => setShowNewTask(true)}
-            className="nav-button primary"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white touch-manipulation transition-opacity hover:opacity-90 min-h-[44px]"
           >
-            <span className="text-sm">+</span>
-            <span className="text-xs">Add Task</span>
+            <span className="text-base font-medium">+</span>
+            <span className="text-sm font-medium">Add Task</span>
           </button>
         </div>
       </div>
@@ -399,21 +388,6 @@ export default function KanbanBoard() {
         }} 
       />
 
-      {/* Task schedule modal */}
-      <TaskScheduleModal 
-        isOpen={showScheduleTask} 
-        currentStatus={schedulingTask?.status || "backlog"}
-        currentTaskWeekId={schedulingTask?.weekId}
-        currentWeekId={currentWeekId}
-        nextWeekId={nextWeekId}
-        taskTitle={schedulingTask?.title}
-        onSchedule={handleScheduleConfirm}
-        onClose={() => {
-          setShowScheduleTask(false);
-          setSchedulingTask(null);
-        }} 
-      />
-
       {/* Recurring tasks modal */}
       <RecurringTasksModal 
         isOpen={showRecurring} 
@@ -421,9 +395,6 @@ export default function KanbanBoard() {
         currentWeekId={currentWeekId}
         nextWeekId={nextWeekId}
       />
-
-      {/* History modal */}
-      <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
 
       {/* Weekly review modal */}
       <WeeklyReviewModal
@@ -433,63 +404,11 @@ export default function KanbanBoard() {
         nextWeekId={nextWeekId}
       />
 
-      {/* Week rollover confirmation modal */}
-      {showRolloverConfirm && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center sm:justify-center p-4 z-50"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowRolloverConfirm(false);
-            }
-          }}
-        >
-          <div className="bg-surface w-full sm:w-96 sm:rounded-lg rounded-t-lg border border-muted">
-            <div className="p-4 border-b border-muted">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M480-250q78 0 134-56t56-134q0-78-56-134t-134-56q-38 0-71 14t-59 38v-62h-60v170h170v-60h-72q17-18 41-29t51-11q54 0 92 38t38 92q0 54-38 92t-92 38q-44 0-77-25.5T356-400h-62q14 65 65.5 107.5T480-250ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-446L526-800H240v640Zm0 0v-640 640Z" /></svg>
-                  Reset {viewingCurrentWeek ? 'This' : 'Next'} Week?
-                </h2>
-                <button
-                  onClick={() => setShowRolloverConfirm(false)}
-                  className="text-tertiary hover:text-foreground text-2xl leading-none"
-                >
-                  ×
-                </button>
-              </div>
-              <p className="text-sm text-tertiary mt-2">
-                This will move all incomplete tasks from {viewingCurrentWeek ? 'this week' : 'next week'} back to the backlog. Completed tasks will be archived.
-              </p>
-            </div>
-
-            <div className="p-4">
-              <div className="flex space-x-3" style={{paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0px))`}}>
-                <button
-                  onClick={() => setShowRolloverConfirm(false)}
-                  className="flex-1 px-4 py-3 border border-muted text-tertiary rounded-lg font-medium hover:bg-secondary touch-manipulation transition-colors min-h-[48px]"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleRolloverWeek}
-                  className="flex-1 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 touch-manipulation transition-opacity min-h-[48px]"
-                >
-                  Reset Week
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PWA Install Prompt */}
-      <PWAInstallPrompt />
-
-      {/* Milestone Celebration Modal */}
-      <MilestoneModal
-        isOpen={showMilestone}
-        milestoneDay={milestoneDay}
-        onClose={() => setShowMilestone(false)}
+      {/* Undo Toast */}
+      <UndoToast
+        action={undoAction}
+        onUndo={handleUndo}
+        onDismiss={() => setUndoAction(null)}
       />
     </div>
   );

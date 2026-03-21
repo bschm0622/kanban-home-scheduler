@@ -1,15 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-
-// Get current week ID (Sunday of current week in YYYY-MM-DD format)
-function getCurrentWeekId(): string {
-  const now = new Date();
-  const sunday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-  const diff = sunday.getDate() - day; // Days to subtract to get to Sunday
-  sunday.setDate(diff);
-  return sunday.toISOString().split('T')[0];
-}
+import { getCurrentWeekIdEST } from "./lib/timezone";
 
 // Get user settings (read-only)
 export const getUserSettings = query({
@@ -65,7 +56,7 @@ export const shouldShowBacklogReview = query({
       return false;
     }
     
-    const currentWeekId = getCurrentWeekId();
+    const currentWeekId = getCurrentWeekIdEST();
     const userSettings = await ctx.db
       .query("userSettings")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
@@ -89,7 +80,7 @@ export const markBacklogReviewed = mutation({
       throw new Error("Not authenticated");
     }
     
-    const currentWeekId = getCurrentWeekId();
+    const currentWeekId = getCurrentWeekIdEST();
     const userSettings = await ctx.db
       .query("userSettings")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))

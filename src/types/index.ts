@@ -11,6 +11,10 @@ export interface Task {
   weekId?: string;
   completedAt?: number;
   createdAt: number;
+  dueTime?: string;
+  isCommitment?: boolean;
+  commitmentWeekId?: string;
+  deletedAt?: number;
 }
 
 export interface RecurringTask {
@@ -20,6 +24,7 @@ export interface RecurringTask {
   priority: "low" | "medium" | "high";
   frequency: "weekly" | "monthly";
   preferredDay?: "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday";
+  dueTime?: string;
   isActive: boolean;
   createdAt: number;
 }

@@ -1,20 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-
-// Get current week ID (Sunday of current week in YYYY-MM-DD format)
-function getCurrentWeekId(): string {
-  const now = new Date();
-  const sunday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-  const diff = sunday.getDate() - day; // Days to subtract to get to Sunday
-  sunday.setDate(diff);
-  return sunday.toISOString().split('T')[0];
-}
-
-// Get day of week (0 = Sunday, 6 = Saturday)
-function getDayOfWeek(): number {
-  return new Date().getDay();
-}
+import { getCurrentWeekIdEST, getESTDate } from "./lib/timezone";
 
 // Get weekly summary stats for review
 export const getWeeklySummary = query({
@@ -65,8 +51,8 @@ export const shouldShowWeeklyReview = query({
       return false;
     }
 
-    const currentWeekId = getCurrentWeekId();
-    const dayOfWeek = getDayOfWeek();
+    const currentWeekId = getCurrentWeekIdEST();
+    const dayOfWeek = getESTDate().getDay();
 
     // Only show on Saturday (6) or Sunday (0)
     if (dayOfWeek !== 6 && dayOfWeek !== 0) {

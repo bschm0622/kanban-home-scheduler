@@ -10,7 +10,6 @@ interface TaskColumnProps {
   onComplete: (taskId: Id<"tasks">) => void;
   onDelete: (taskId: Id<"tasks">) => void;
   onEdit: (taskId: Id<"tasks">) => void;
-  onSchedule: (taskId: Id<"tasks">) => void;
   isToday?: boolean;
   date?: string;
   isBacklog?: boolean;
@@ -27,7 +26,6 @@ export default function TaskColumn({
   onComplete,
   onDelete,
   onEdit,
-  onSchedule,
   isToday = false,
   date,
   isBacklog = false,
@@ -103,7 +101,6 @@ export default function TaskColumn({
               onComplete={onComplete}
               onDelete={onDelete}
               onEdit={onEdit}
-              onSchedule={onSchedule}
             />
           ))}
           {tasks.length === 0 && (

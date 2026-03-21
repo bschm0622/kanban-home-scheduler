@@ -11,7 +11,6 @@ interface AppHeaderProps {
 }
 
 export default function AppHeader({ userName, todayDate, allExpanded, onToggleExpandAll }: AppHeaderProps) {
-  const streakData = useQuery(api.streaks.getStreak);
   const currentWeekId = getCurrentWeekId();
   const commitments = useQuery(api.weeklyReview.getWeekCommitments, { weekId: currentWeekId });
 
@@ -26,11 +25,6 @@ export default function AppHeader({ userName, todayDate, allExpanded, onToggleEx
             <p className="text-xs text-tertiary">
               {todayDate}
             </p>
-            {streakData && streakData.currentStreak > 0 && (
-              <span className="text-xs font-medium text-orange-600 dark:text-orange-400 flex items-center gap-1">
-                🔥 {streakData.currentStreak} day{streakData.currentStreak !== 1 ? 's' : ''}
-              </span>
-            )}
             {commitments && commitments.totalCount > 0 && (
               <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
                 🎯 {commitments.completedCount}/{commitments.totalCount}
@@ -51,6 +45,8 @@ export default function AppHeader({ userName, todayDate, allExpanded, onToggleEx
                   const isDark = document.documentElement.classList.contains('dark');
                   document.documentElement.classList.toggle('light', !isDark);
                   localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                  var tc = isDark ? '#111827' : '#ffffff';
+                  document.querySelectorAll('meta[name=theme-color]').forEach(function(el) { el.setAttribute('content', tc); });
                 "
               >
                 <svg xmlns="http://www.w3.org/2000/svg" class="hidden h-4 w-4 stroke-current dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -64,7 +60,7 @@ export default function AppHeader({ userName, todayDate, allExpanded, onToggleEx
           }} />
           <button
             onClick={onToggleExpandAll}
-            className="bg-muted/30 text-tertiary hover:bg-muted/50 px-3 py-1.5 rounded-lg text-sm font-medium touch-manipulation transition-colors"
+            className="border border-muted text-tertiary hover:bg-secondary px-2.5 py-1.5 rounded-lg text-sm font-medium touch-manipulation transition-colors"
             title={allExpanded ? "Collapse All" : "Expand All"}
           >
             {allExpanded ? (
