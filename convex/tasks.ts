@@ -141,7 +141,6 @@ export const createTask = mutation({
     // Schedule reminder if dueTime is set and task is on a day
     if (args.dueTime && weekId && isDayStatus(status)) {
       const timestamp = getESTTimestamp(weekId, status as DayStatus, args.dueTime);
-      console.log(`[Reminder] Task "${args.title}" | weekId=${weekId} status=${status} dueTime=${args.dueTime} | scheduled timestamp=${new Date(timestamp).toISOString()} | now=${new Date().toISOString()} | inFuture=${timestamp > Date.now()}`);
       if (timestamp > Date.now()) {
         const jobId = await ctx.scheduler.runAt(
           timestamp,
@@ -149,12 +148,7 @@ export const createTask = mutation({
           { taskId }
         );
         await ctx.db.patch(taskId, { reminderJobId: jobId });
-        console.log(`[Reminder] Scheduled job ${jobId} for task "${args.title}"`);
-      } else {
-        console.log(`[Reminder] SKIPPED — timestamp is in the past`);
       }
-    } else {
-      console.log(`[Reminder] Not scheduling — dueTime=${args.dueTime} weekId=${weekId} status=${status}`);
     }
 
     return taskId;

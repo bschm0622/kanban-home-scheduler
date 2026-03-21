@@ -306,10 +306,7 @@ export const sendTaskReminder = internalAction({
       taskId: args.taskId,
     });
 
-    console.log(`[Reminder] sendTaskReminder fired for taskId=${args.taskId} | task=${task?.title ?? "NOT FOUND"} | status=${task?.status} | deleted=${!!task?.deletedAt}`);
-
     if (!task || task.status === "completed" || task.deletedAt) {
-      console.log(`[Reminder] Skipped (completed/deleted): ${args.taskId}`);
       return { success: true, skipped: true };
     }
 
