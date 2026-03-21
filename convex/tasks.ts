@@ -288,13 +288,17 @@ export const updateTask = mutation({
     if (args.description !== undefined) updateData.description = args.description;
     if (args.priority !== undefined) updateData.priority = args.priority;
 
-    // Handle dueTime change
+    // Handle dueTime change — empty string means clear
     if (args.dueTime !== undefined) {
       const reminderUpdate = await handleReminder(
         ctx, args.taskId, task, args.dueTime || null
       );
       updateData.dueTime = args.dueTime || undefined;
       updateData.reminderJobId = reminderUpdate.reminderJobId;
+      // If clearing dueTime, explicitly remove it
+      if (!args.dueTime) {
+        updateData.dueTime = undefined;
+      }
     }
 
     return await ctx.db.patch(args.taskId, updateData);

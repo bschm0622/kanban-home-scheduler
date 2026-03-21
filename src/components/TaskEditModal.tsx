@@ -73,7 +73,7 @@ export default function TaskEditModal({ isOpen, task, onClose }: TaskEditModalPr
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
-        dueTime: dueTime || undefined,
+        dueTime: dueTime || "",
       });
 
       // If the day changed, reschedule
