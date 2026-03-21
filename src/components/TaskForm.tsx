@@ -27,15 +27,22 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
   const todayMonth = today.getMonth();
   const todayDay = today.getDate();
 
+  const isDateInPast = (date: Date) => {
+    return date.getFullYear() < todayYear ||
+      (date.getFullYear() === todayYear && date.getMonth() < todayMonth) ||
+      (date.getFullYear() === todayYear && date.getMonth() === todayMonth && date.getDate() < todayDay);
+  };
+
   // Calculate dates for a specific week
   const getWeekDates = (weekId: string) => {
-    const sunday = new Date(weekId);
-    
-    const dates: Array<{value: TaskStatus, label: string, weekId: string}> = [];
-    
+    const [y, m, d] = weekId.split('-').map(Number);
+    const sunday = new Date(y, m - 1, d);
+
+    const dates: Array<{value: TaskStatus, label: string, weekId: string, date: Date}> = [];
+
     const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
     const dayLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    
+
     dayNames.forEach((day, index) => {
       const date = new Date(sunday);
       date.setDate(sunday.getDate() + index);
@@ -43,10 +50,11 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
       dates.push({
         value: day,
         label: `${dayLabels[index]} (${dateStr})`,
-        weekId: weekId
+        weekId: weekId,
+        date,
       });
     });
-    
+
     return dates;
   };
 
@@ -176,31 +184,28 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
             <h3 className="text-sm font-medium text-foreground mb-2">This Week</h3>
             <div className="grid grid-cols-7 gap-1">
               {currentWeekOptions.map((option) => {
-                // Parse weekId as local date (not UTC)
-                const [year, month, day] = option.weekId.split('-').map(Number);
-                const sunday = new Date(year, month - 1, day); // month is 0-indexed
-                const dayIndex = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(option.value);
-                const optionDate = new Date(sunday);
-                optionDate.setDate(sunday.getDate() + dayIndex);
-                
-                const isToday = optionDate.getFullYear() === todayYear && 
-                               optionDate.getMonth() === todayMonth && 
-                               optionDate.getDate() === todayDay;
+                const past = isDateInPast(option.date);
+                const isToday = option.date.getFullYear() === todayYear &&
+                               option.date.getMonth() === todayMonth &&
+                               option.date.getDate() === todayDay;
                 return (
                   <button
                     type="button"
                     key={`current-${option.value}`}
+                    disabled={past}
                     onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
                     className={`p-2 rounded-md transition-colors touch-manipulation min-h-[44px] text-center ${
-                      selectedOption?.value === option.value && selectedOption?.weekId === option.weekId
-                        ? 'border-primary bg-primary/10 text-primary' 
+                      past
+                        ? 'opacity-30 cursor-not-allowed border-muted text-tertiary'
+                        : selectedOption?.value === option.value && selectedOption?.weekId === option.weekId
+                        ? 'border-primary bg-primary/10 text-primary'
                         : isToday
                         ? 'border-blue-500 border-2 text-foreground hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                         : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
                     }`}
                   >
                     <div className="text-xs font-medium">{option.value.charAt(0).toUpperCase()}</div>
-                    <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
+                    <div className="text-xs opacity-70">{option.date.getDate()}</div>
                   </button>
                 );
               })}
@@ -212,15 +217,6 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
             <h3 className="text-sm font-medium text-foreground mb-2">Next Week</h3>
             <div className="grid grid-cols-7 gap-1">
               {nextWeekOptions.map((option) => {
-                // Parse weekId as local date (not UTC)
-                const [year, month, day] = option.weekId.split('-').map(Number);
-                const sunday = new Date(year, month - 1, day); // month is 0-indexed
-                const dayIndex = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(option.value);
-                const optionDate = new Date(sunday);
-                optionDate.setDate(sunday.getDate() + dayIndex);
-                const isToday = optionDate.getFullYear() === todayYear && 
-                               optionDate.getMonth() === todayMonth && 
-                               optionDate.getDate() === todayDay;
                 return (
                   <button
                     type="button"
@@ -228,14 +224,12 @@ export default function TaskForm({ isOpen, onClose, currentWeekId, nextWeekId, v
                     onClick={() => setSelectedOption({ value: option.value, weekId: option.weekId })}
                     className={`p-2 rounded-md transition-colors touch-manipulation min-h-[44px] text-center ${
                       selectedOption?.value === option.value && selectedOption?.weekId === option.weekId
-                        ? 'border-primary bg-primary/10 text-primary' 
-                        : isToday
-                        ? 'border-blue-500 border-2 text-foreground hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        ? 'border-primary bg-primary/10 text-primary'
                         : 'border-muted text-foreground hover:border-primary/50 hover:bg-primary/5'
                     }`}
                   >
                     <div className="text-xs font-medium">{option.value.charAt(0).toUpperCase()}</div>
-                    <div className="text-xs opacity-70">{option.label.split(' (')[1]?.replace(')', '').split(' ')[1]}</div>
+                    <div className="text-xs opacity-70">{option.date.getDate()}</div>
                   </button>
                 );
               })}

@@ -138,7 +138,9 @@
 
 /* Clean minimal mobile design */
 .app {
-    @apply h-screen bg-background text-foreground flex flex-col;
+    @apply bg-background text-foreground flex flex-col;
+    height: 100dvh;
+    overflow: hidden;
 }
 
 .app-header {

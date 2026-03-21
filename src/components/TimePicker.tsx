@@ -68,7 +68,7 @@ export default function TimePicker({ value, onChange, onClear }: TimePickerProps
 
   const handleEnable = () => {
     setIsOpen(true);
-    applyCustomTime(hour, minute, period);
+    // Don't auto-set time — let user interact with picker first
   };
 
   const handleClear = () => {
