@@ -1,7 +1,4 @@
 import { UserButton } from "@clerk/clerk-react";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { getCurrentWeekId } from "../utils/weekUtils";
 
 interface AppHeaderProps {
   userName?: string;
@@ -11,9 +8,6 @@ interface AppHeaderProps {
 }
 
 export default function AppHeader({ userName, todayDate, allExpanded, onToggleExpandAll }: AppHeaderProps) {
-  const currentWeekId = getCurrentWeekId();
-  const commitments = useQuery(api.weeklyReview.getWeekCommitments, { weekId: currentWeekId });
-
   return (
     <div className="app-header">
       <div className="flex items-center justify-between">
@@ -21,16 +15,9 @@ export default function AppHeader({ userName, todayDate, allExpanded, onToggleEx
           <h1 className="text-lg font-semibold text-foreground">
             {userName ? `${userName}'s Tasks` : 'Home Tasks'}
           </h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs text-tertiary">
-              {todayDate}
-            </p>
-            {commitments && commitments.totalCount > 0 && (
-              <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
-                🎯 {commitments.completedCount}/{commitments.totalCount}
-              </span>
-            )}
-          </div>
+          <p className="text-xs text-tertiary">
+            {todayDate}
+          </p>
         </div>
         
         <div className="flex items-center gap-3">

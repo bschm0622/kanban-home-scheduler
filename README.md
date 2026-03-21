@@ -40,14 +40,13 @@ A mobile-first kanban-style task manager for organizing your week. Built as a pe
 
 ### Weekly Review
 - Prompted on Saturday/Sunday (once per week)
-- Step 1: Review stats (completion rate, commitment tracking)
-- Step 2: Triage oldest backlog tasks (schedule or delete)
-- Step 3: Set up to 5 commitments for next week with optional week theme
+- Triage oldest backlog tasks: schedule to a day, delete, or skip
+- Dismissable and won't nag again once reviewed
 
 ### Slack Notifications
-- **Morning Briefing** (daily, 9 AM EST): Today's tasks sorted by time, yesterday's unfinished items, commitment status
+- **Morning Briefing** (daily, 9 AM EST): Today's tasks sorted by time, yesterday's unfinished items
 - **Task Reminders** (per-task): Fires at the scheduled due time via `scheduler.runAt()`
-- **Weekly Recap** (Sunday, 9 PM EST): Completion stats and commitment results
+- **Weekly Recap** (Sunday, 9 PM EST): Tasks completed vs total
 
 ### Automated Jobs (Cron)
 - Auto-rollover: Monday 3 AM EST, moves incomplete tasks from past weeks to backlog

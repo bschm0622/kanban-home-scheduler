@@ -82,31 +82,6 @@ export const getDaySummary = internalQuery({
   },
 });
 
-// Get commitment data for the week (using index instead of full table scan)
-export const getCommitmentsForWeek = internalQuery({
-  args: { weekId: v.string() },
-  handler: async (ctx, args) => {
-    const weekTasks = await ctx.db
-      .query("tasks")
-      .withIndex("by_week", (q) => q.eq("weekId", args.weekId))
-      .collect();
-
-    const commitmentTasks = weekTasks.filter(t =>
-      ALLOWED_USER_IDS.includes(t.userId) &&
-      t.isCommitment &&
-      t.commitmentWeekId === args.weekId &&
-      !t.deletedAt
-    );
-
-    const completed = commitmentTasks.filter(t => t.status === "completed");
-    return {
-      total: commitmentTasks.length,
-      completed: completed.length,
-      tasks: commitmentTasks,
-    };
-  },
-});
-
 // Get week tasks for recap (using index instead of full table scan)
 export const getWeekTasksForRecap = internalQuery({
   args: { weekId: v.string() },
@@ -120,14 +95,10 @@ export const getWeekTasksForRecap = internalQuery({
       ALLOWED_USER_IDS.includes(t.userId) && !t.deletedAt
     );
     const completed = userTasks.filter(t => t.status === "completed");
-    const commitments = userTasks.filter(t => t.isCommitment);
-    const completedCommitments = commitments.filter(t => t.status === "completed");
 
     return {
       total: userTasks.length,
       completed: completed.length,
-      commitments: commitments.length,
-      completedCommitments: completedCommitments.length,
     };
   },
 });
@@ -193,11 +164,6 @@ export const sendScheduledDailyTasks = internalAction({
       dayName: yesterday,
     });
 
-    // Get commitment data
-    const commitments = await ctx.runQuery(internal.slackNotifications.getCommitmentsForWeek, {
-      weekId: currentWeekId,
-    });
-
     // Empty-task guard: skip if nothing to report
     if (todayTasks.length === 0 && yesterdayTasks.length === 0) {
       console.log("No tasks for today or yesterday, skipping morning briefing");
@@ -224,45 +190,26 @@ export const sendScheduledDailyTasks = internalAction({
           text: {
             type: "mrkdwn",
             text: `*⚠️ Unfinished from ${formattedYesterday} (${yesterdayTasks.length})*\n${yesterdayTasks.map(t =>
-              `• ${t.title} [${priorityEmoji(t.priority)}]${t.isCommitment ? ' 📌' : ''}`
+              `• ${t.title} [${priorityEmoji(t.priority)}]`
             ).join('\n')}`
           }
         }
       );
     }
 
-    // Today's commitment tasks
-    const commitmentTasks = todayTasks.filter(t => t.isCommitment);
-    if (commitmentTasks.length > 0) {
-      blocks.push(
-        { type: "divider" },
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `*🎯 Today's Commitments (${commitmentTasks.length})*\n${commitmentTasks.map(t =>
-              `📌 ${t.title} [${t.priority.toUpperCase()}]${t.dueTime ? ` — ⏰ ${formatTime12h(t.dueTime)}` : ''}`
-            ).join('\n')}`
-          }
-        }
-      );
-    }
-
-    // Today's other tasks
-    const otherTasks = todayTasks.filter(t => !t.isCommitment);
-    if (otherTasks.length > 0) {
-      // Sort: tasks with due times first (chronologically), then by priority
-      const withTime = otherTasks.filter(t => t.dueTime).sort((a, b) => a.dueTime!.localeCompare(b.dueTime!));
-      const withoutTime = otherTasks.filter(t => !t.dueTime);
-
+    // Today's tasks — sorted by due time first, then by priority
+    if (todayTasks.length > 0) {
+      const withTime = todayTasks.filter(t => t.dueTime).sort((a, b) => a.dueTime!.localeCompare(b.dueTime!));
+      const withoutTime = todayTasks.filter(t => !t.dueTime);
       const sorted = [...withTime, ...withoutTime];
+
       blocks.push(
         { type: "divider" },
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `*📋 Other Tasks (${sorted.length})*\n${sorted.map(t =>
+            text: `*📋 Today's Tasks (${sorted.length})*\n${sorted.map(t =>
               `• ${t.title} [${priorityEmoji(t.priority)}]${t.dueTime ? ` — ⏰ ${formatTime12h(t.dueTime)}` : ''}`
             ).join('\n')}`
           }
@@ -275,7 +222,7 @@ export const sendScheduledDailyTasks = internalAction({
       type: "context",
       elements: [{
         type: "mrkdwn",
-        text: `📊 Today: ${todayTasks.length} tasks | 🎯 Weekly commitments: ${commitments.completed}/${commitments.total}`
+        text: `📊 Today: ${todayTasks.length} tasks`
       }]
     });
 
@@ -319,7 +266,7 @@ export const sendTaskReminder = internalAction({
         type: "section",
         text: {
           type: "mrkdwn",
-          text: `*${task.title}* is due now! ${priorityEmoji(task.priority)}${task.isCommitment ? ' 📌' : ''}${task.description ? `\n_${task.description}_` : ''}`
+          text: `*${task.title}* is due now! ${priorityEmoji(task.priority)}${task.description ? `\n_${task.description}_` : ''}`
         }
       }
     ];
@@ -359,11 +306,6 @@ export const sendWeeklyRecap = internalAction({
       return { success: true, skipped: true };
     }
 
-    const completionRate = Math.round((stats.completed / stats.total) * 100);
-    const commitmentRate = stats.commitments > 0
-      ? Math.round((stats.completedCommitments / stats.commitments) * 100)
-      : 0;
-
     const blocks = [
       {
         type: "header",
@@ -372,8 +314,7 @@ export const sendWeeklyRecap = internalAction({
       {
         type: "section",
         fields: [
-          { type: "mrkdwn", text: `*✅ Completed*\n${stats.completed}/${stats.total} tasks (${completionRate}%)` },
-          { type: "mrkdwn", text: `*🎯 Commitments*\n${stats.completedCommitments}/${stats.commitments} (${commitmentRate}%)` },
+          { type: "mrkdwn", text: `*✅ Completed*\n${stats.completed}/${stats.total} tasks` },
           { type: "mrkdwn", text: `*💪 Total*\n${stats.total} tasks` }
         ]
       }

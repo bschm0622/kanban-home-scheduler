@@ -123,10 +123,14 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
   };
 
   return (
-    <div className="relative overflow-hidden rounded-lg">
-      {/* Swipe backgrounds - only visible during active swipe */}
+    <div
+      ref={cardRef}
+      className={`task-card priority-${task.priority} relative overflow-hidden`}
+      onClick={handleCardClick}
+    >
+      {/* Swipe backgrounds - positioned behind card content */}
       {swipeDirection && (
-        <div className="absolute inset-0 flex">
+        <div className="absolute inset-0 flex z-0">
           {swipeDirection === 'right' && (
             <div className="flex-1 bg-green-500 flex items-center pl-4">
               <span className="text-white text-lg font-bold">✓</span>
@@ -140,22 +144,13 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
         </div>
       )}
 
-      {/* Card content */}
-      <div
-        ref={cardRef}
-        className={`task-card priority-${task.priority} relative z-10`}
-        onClick={handleCardClick}
-      >
+      {/* Card content — above swipe background */}
+      <div className="relative z-10 bg-surface rounded-lg">
         <div className="task-content">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-medium text-foreground text-sm leading-snug">{task.title}</h3>
-                {task.isCommitment && (
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-medium flex-shrink-0" title="Weekly Commitment">
-                    📌
-                  </span>
-                )}
               </div>
               {task.description && (
                 <p className="text-xs text-tertiary mt-1 leading-relaxed">{task.description}</p>

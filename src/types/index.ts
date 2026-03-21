@@ -12,8 +12,6 @@ export interface Task {
   completedAt?: number;
   createdAt: number;
   dueTime?: string;
-  isCommitment?: boolean;
-  commitmentWeekId?: string;
   deletedAt?: number;
 }
 

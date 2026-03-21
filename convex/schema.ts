@@ -22,8 +22,6 @@ export default defineSchema({
     createdAt: v.number(),
     recurringTaskId: v.optional(v.id("recurringTasks")),
     userId: v.string(), // Clerk user ID
-    isCommitment: v.optional(v.boolean()), // Is this a commitment task for the week?
-    commitmentWeekId: v.optional(v.string()), // Which week was this committed to?
     dueTime: v.optional(v.string()), // "HH:MM" in 24h format (EST) — triggers Slack reminder
     reminderJobId: v.optional(v.id("_scheduled_functions")), // Scheduled reminder job reference
     deletedAt: v.optional(v.number()), // Soft delete timestamp — permanently removed after 24h
@@ -62,10 +60,6 @@ export default defineSchema({
     isArchived: v.boolean(),
     createdAt: v.number(),
     userId: v.string(), // Clerk user ID
-    commitmentTaskIds: v.optional(v.array(v.id("tasks"))), // Tasks committed for this week
-    weekTheme: v.optional(v.string()), // Optional theme/intention for the week
-    reflectionNote: v.optional(v.string()), // Reflection note from week review
-    reviewCompletedAt: v.optional(v.number()), // When the weekly review was completed
   })
     .index("by_week_id", ["weekId"])
     .index("by_user", ["userId"])
