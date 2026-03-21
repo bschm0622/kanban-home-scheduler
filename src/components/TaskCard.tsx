@@ -26,6 +26,7 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
   const touchStartX = useRef(0);
   const touchCurrentX = useRef(0);
   const cardRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const isSwiping = useRef(false);
   const hapticFired = useRef(false);
 
@@ -69,12 +70,12 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
       setSwipeDirection(deltaX > 0 ? 'right' : 'left');
     }
 
-    if (isSwiping.current && cardRef.current) {
+    if (isSwiping.current && contentRef.current) {
       e.preventDefault();
       e.stopPropagation();
       const clampedDelta = Math.max(-150, Math.min(150, deltaX));
-      cardRef.current.style.transform = `translateX(${clampedDelta}px)`;
-      cardRef.current.style.transition = 'none';
+      contentRef.current.style.transform = `translateX(${clampedDelta}px)`;
+      contentRef.current.style.transition = 'none';
 
       if (!hapticFired.current && Math.abs(deltaX) > SWIPE_THRESHOLD) {
         if (navigator.vibrate) navigator.vibrate(10);
@@ -86,9 +87,9 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
   const onTouchEndCb = useCallback(() => {
     const deltaX = touchCurrentX.current - touchStartX.current;
 
-    if (cardRef.current) {
-      cardRef.current.style.transition = 'transform 0.3s ease';
-      cardRef.current.style.transform = 'translateX(0)';
+    if (contentRef.current) {
+      contentRef.current.style.transition = 'transform 0.3s ease';
+      contentRef.current.style.transform = 'translateX(0)';
     }
 
     if (isSwiping.current) {
@@ -144,8 +145,8 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
         </div>
       )}
 
-      {/* Card content — above swipe background */}
-      <div className="relative z-10 bg-surface rounded-lg">
+      {/* Card content — slides to reveal swipe background */}
+      <div ref={contentRef} className="relative z-10 bg-surface rounded-lg">
         <div className="task-content">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
