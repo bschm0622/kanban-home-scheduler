@@ -319,7 +319,7 @@ export const sendTaskReminder = internalAction({
         type: "section",
         text: {
           type: "mrkdwn",
-          text: `*${task.title}* is due now! ${priorityEmoji(task.priority)}${task.isCommitment ? ' 📌' : ''}${task.description ? `\n_${task.description}_` : ''}`
+          text: `*${task.title}* is due now! ${priorityEmoji(task.priority)}${task.isCommitment ? ' 📌' : ''}${task.description ? `\n_${task.description}_` : ''}\n\n<https://home.beckyschmidt.me|Open App>`
         }
       }
     ];
