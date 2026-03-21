@@ -146,7 +146,9 @@ export default function TaskCard({ task, onStatusChange, onComplete, onDelete, o
       )}
 
       {/* Card content — slides to reveal swipe background */}
-      <div ref={contentRef} className={`relative z-10 bg-surface rounded-lg priority-${task.priority}`}>
+      <div ref={contentRef} className={`relative z-10 bg-surface rounded-lg border-l-4 ${
+        task.priority === 'high' ? 'border-l-red-500' : task.priority === 'medium' ? 'border-l-yellow-500' : 'border-l-green-500'
+      }`}>
         <div className="task-content">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
