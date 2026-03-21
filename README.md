@@ -1,163 +1,130 @@
-# Kanban Home Scheduler
+# Schmidt Home Tasks
 
-A personal task management application built with React, TypeScript, and Convex that helps you organize your week using a kanban-style board.
+A mobile-first kanban-style task manager for organizing your week. Built as a personal PWA with real-time sync, Slack notifications, and weekly planning workflows.
 
-## ✨ Features
+**Live at [home.beckyschmidt.me](https://home.beckyschmidt.me)**
 
-- **Weekly Kanban Board**: Organize tasks across Monday-Sunday columns
-- **Task Priorities**: Low, medium, and high priority levels with color coding
-- **Recurring Tasks**: Set up tasks that automatically generate each week
-- **Authentication**: Secure login with Clerk
-- **Task History**: View completed tasks and weekly performance stats
-- **Responsive Design**: Works on desktop and mobile devices
-- **Real-time Updates**: Live synchronization across devices
+## Tech Stack
 
-## 🏗️ Tech Stack
+- **Frontend**: Astro + React 18 + TypeScript
+- **Backend**: Convex (real-time database + scheduled functions)
+- **Auth**: Clerk
+- **Styling**: Tailwind CSS v4
+- **Notifications**: Slack Incoming Webhooks
+- **PWA**: @vite-pwa/astro with Workbox caching
 
-- **Frontend**: React 18 + TypeScript + Astro
-- **Backend**: Convex (real-time database)
-- **Authentication**: Clerk
-- **Styling**: Tailwind CSS with custom kanban theme
-- **Icons**: Material Design SVG icons
+## Features
 
-## 🚀 Getting Started
+### Kanban Board
+- Weekly view with Sunday-Saturday columns plus backlog
+- Collapsible day columns with task counts (today auto-expands)
+- Toggle between current week and next week
+- Pull-to-refresh on mobile
+- Completed tasks column
+
+### Task Management
+- Create tasks with title, description, and priority (low/medium/high)
+- Schedule tasks to any day of the current or next week
+- Set optional reminder times (triggers Slack notification at that time)
+- Swipe right to complete, swipe left to edit (mobile)
+- Soft-delete with 3-second undo toast
+- Priority color coding on task cards (green/yellow/red left border)
+- Confetti animation on completion
+
+### Recurring Tasks
+- Create weekly or monthly recurring task templates
+- Set preferred day and optional reminder time
+- Auto-generates instances every Monday at 4 AM EST
+- Manual bulk generation for current or next week
+- Edit, activate/deactivate, or delete templates
+
+### Weekly Review
+- Prompted on Saturday/Sunday (once per week)
+- Step 1: Review stats (completion rate, commitment tracking)
+- Step 2: Triage oldest backlog tasks (schedule or delete)
+- Step 3: Set up to 5 commitments for next week with optional week theme
+
+### Slack Notifications
+- **Morning Briefing** (daily, 9 AM EST): Today's tasks sorted by time, yesterday's unfinished items, commitment status
+- **Task Reminders** (per-task): Fires at the scheduled due time via `scheduler.runAt()`
+- **Weekly Recap** (Sunday, 9 PM EST): Completion stats and commitment results
+
+### Automated Jobs (Cron)
+- Auto-rollover: Monday 3 AM EST, moves incomplete tasks from past weeks to backlog
+- Auto-generate recurring tasks: Monday 4 AM EST
+- Cleanup: Daily 3 AM EST, permanently deletes soft-deleted tasks older than 24 hours
+
+### Mobile & PWA
+- Installable PWA with standalone display and offline caching
+- Touch-optimized with 44px minimum tap targets
+- Safe area inset handling for notched devices
+- Dark/light theme with system preference detection
+- 100dvh viewport handling for mobile browsers
+
+## Getting Started
 
 ### Prerequisites
-
-- Node.js 18+ 
-- npm or yarn
+- Node.js 18+
 - Convex account
 - Clerk account
 
-### Installation
+### Setup
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd kanban-home-scheduler
-```
-
-2. Install dependencies:
 ```bash
 npm install
-```
-
-3. Set up environment variables:
-```bash
-# Copy example env file
 cp .env.example .env.local
-
-# Configure your environment variables:
-# - Convex deployment URL
-# - Clerk publishable key
+# Configure: PUBLIC_CONVEX_URL, Clerk keys, SLACK_WEBHOOK_URL
 ```
 
-4. Set up Convex:
+### Development
+
+Run both in separate terminals:
+
 ```bash
-npx convex dev
+npm run dev          # Astro dev server at localhost:4321
+npx convex dev      # Convex backend
 ```
 
-5. Configure Clerk authentication in your Convex dashboard
+### Production
 
-6. Start the development server:
 ```bash
-npm run dev
+npm run build        # Build to ./dist/
+npx convex deploy    # Deploy Convex functions
 ```
 
-Visit `http://localhost:4321` to see the application.
-
-## 📱 Usage
-
-### Managing Tasks
-
-- **Add Tasks**: Click the + button to create new tasks with title, description, and priority
-- **Move Tasks**: Drag tasks between days or use the task actions menu
-- **Complete Tasks**: Click the checkmark to mark tasks as done
-- **Delete Tasks**: Use the delete button in task actions
-
-### Recurring Tasks
-
-- **Create**: Add tasks that should repeat weekly (dishes, laundry, etc.)
-- **Generate**: Select which recurring tasks to add to your current week
-- **Select All**: Quickly select/deselect all recurring tasks
-- **Manage**: Edit or delete recurring task templates
-
-### Week Management
-
-- **Navigation**: Use arrow buttons to switch between weeks
-- **History**: View past weeks and completion statistics
-- **Auto-archive**: Completed weeks are automatically saved to history
-
-## 🗂️ Project Structure
+## Project Structure
 
 ```
 src/
-├── components/           # React components
-│   ├── KanbanBoard.tsx  # Main kanban interface
-│   ├── TaskCard.tsx     # Individual task component
-│   ├── RecurringTasksModal.tsx # Recurring task management
-│   └── HistoryModal.tsx # Week history viewer
-├── styles/              # CSS and styling
-├── types/               # TypeScript type definitions
-└── pages/               # Astro pages
-    └── index.astro      # Main application page
+  components/
+    KanbanBoard.tsx          # Main board with columns, nav, week switching
+    TaskCard.tsx             # Individual task with swipe gestures
+    TaskForm.tsx             # New task creation modal
+    TaskEditModal.tsx        # Edit task details + reschedule
+    RecurringTasksModal.tsx  # Manage recurring task templates
+    RecurringTaskEditModal.tsx
+    WeeklyReviewModal.tsx    # Saturday/Sunday weekly planning flow
+    TimePicker.tsx           # 12-hour time picker with AM/PM
+    ConfettiEffect.tsx       # Completion celebration
+  layouts/
+    Layout.astro             # Base HTML layout
+  styles/
+    global.css               # Theme variables, kanban styles, dark mode
+  pages/
+    index.astro              # Main app page
 
 convex/
-├── tasks.ts            # Task database operations
-├── recurringTasks.ts   # Recurring task logic
-├── history.ts          # Week archiving and stats
-└── schema.ts           # Database schema definitions
+  schema.ts                  # Database schema (tasks, recurringTasks, weeks, userSettings)
+  tasks.ts                   # Task CRUD + reminder scheduling
+  recurringTasks.ts          # Recurring task templates + generation
+  weekManager.ts             # Auto-rollover logic
+  slackNotifications.ts      # All Slack messages (briefing, reminders, recap)
+  crons.ts                   # Scheduled job definitions
+  lib/timezone.ts            # EST timezone utilities
 ```
 
-## 🎨 Customization
+## Auth & Security
 
-The app uses a custom CSS theme with CSS variables for easy customization:
-
-- Colors: Defined in `src/styles/global.css`
-- Task priorities: Color-coded system (green/yellow/red)
-- Dark mode: Automatic based on system preference
-- Mobile responsive: Optimized touch targets and layouts
-
-## 🔧 Commands
-
-| Command | Action |
-|---------|--------|
-| `npm install` | Install dependencies |
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview production build |
-| `npx convex dev` | Start Convex development |
-| `npx convex deploy` | Deploy Convex functions |
-
-## 🔐 Authentication & Security
-
-- User authentication via Clerk
-- Row-level security in Convex
-- All database operations scoped to authenticated users
-- No sensitive data stored client-side
-
-## 📊 Performance
-
-- Real-time updates via Convex subscriptions
-- Optimistic UI updates for better UX
-- Efficient re-renders with React best practices
-- Lazy loading of historical data
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Built with [Astro](https://astro.build/)
-- Real-time backend by [Convex](https://convex.dev/)
-- Authentication by [Clerk](https://clerk.com/)
-- Icons by [Material Design](https://fonts.google.com/icons)
+- Clerk authentication required for all operations
+- Row-level security: all queries/mutations scoped to `userId`
+- Slack notifications filtered to allowed user IDs
