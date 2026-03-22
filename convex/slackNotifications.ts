@@ -1,4 +1,4 @@
-import { internalAction, internalQuery } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import {
@@ -103,6 +103,30 @@ export const getWeekTasksForRecap = internalQuery({
   },
 });
 
+// --- Deduplication ---
+
+// Check if a cron notification was already sent within the given window.
+// If not, record it and return shouldSend: true. This prevents duplicate alerts
+// when both dev and production Convex deployments fire the same cron.
+export const checkAndRecordNotification = internalMutation({
+  args: { cronName: v.string(), windowMs: v.number() },
+  handler: async (ctx, args) => {
+    const since = Date.now() - args.windowMs;
+    const recent = await ctx.db
+      .query("cronLog")
+      .withIndex("by_cron_name", (q) => q.eq("cronName", args.cronName))
+      .order("desc")
+      .first();
+
+    if (recent && recent.sentAt > since) {
+      return { shouldSend: false };
+    }
+
+    await ctx.db.insert("cronLog", { cronName: args.cronName, sentAt: Date.now() });
+    return { shouldSend: true };
+  },
+});
+
 // --- Slack Helpers ---
 
 async function sendToSlack(webhookUrl: string, message: any): Promise<void> {
@@ -146,6 +170,16 @@ export const sendScheduledDailyTasks = internalAction({
     if (!webhookUrl) {
       console.error("SLACK_WEBHOOK_URL not configured");
       return { success: false, error: "SLACK_WEBHOOK_URL not configured" };
+    }
+
+    // Dedup guard: skip if already sent within the last 2 hours
+    const { shouldSend } = await ctx.runMutation(
+      internal.slackNotifications.checkAndRecordNotification,
+      { cronName: "morning-briefing", windowMs: 2 * 60 * 60 * 1000 }
+    );
+    if (!shouldSend) {
+      console.log("Morning briefing already sent recently, skipping duplicate");
+      return { success: true, skipped: true };
     }
 
     const currentWeekId = getCurrentWeekIdEST();
@@ -291,9 +325,20 @@ export const getTaskById = internalQuery({
 // --- Weekly Recap (Sunday evening) ---
 
 export const sendWeeklyRecap = internalAction({
+  args: {},
   handler: async (ctx) => {
     const webhookUrl = process.env.SLACK_WEBHOOK_URL;
     if (!webhookUrl) return { success: false };
+
+    // Dedup guard: skip if already sent within the last 12 hours
+    const { shouldSend } = await ctx.runMutation(
+      internal.slackNotifications.checkAndRecordNotification,
+      { cronName: "weekly-recap", windowMs: 12 * 60 * 60 * 1000 }
+    );
+    if (!shouldSend) {
+      console.log("Weekly recap already sent recently, skipping duplicate");
+      return { success: true, skipped: true };
+    }
 
     const currentWeekId = getCurrentWeekIdEST();
     const stats = await ctx.runQuery(internal.slackNotifications.getWeekTasksForRecap, {

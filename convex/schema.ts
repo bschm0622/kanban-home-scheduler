@@ -73,4 +73,11 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"]),
+
+  // Deduplication log for cron-triggered Slack notifications.
+  // Prevents duplicate alerts when dev and production deployments both run crons.
+  cronLog: defineTable({
+    cronName: v.string(), // Unique identifier for the cron job (e.g. "morning-briefing")
+    sentAt: v.number(),   // Timestamp when the notification was sent
+  }).index("by_cron_name", ["cronName"]),
 });
