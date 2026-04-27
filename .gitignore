@@ -27,3 +27,8 @@ pnpm-debug.log*
 
 # Local Netlify folder
 .netlify
+.COMPLETED_FEATURES.md.icloud
+.FUTURE_FEATURES.md.icloud
+.IMPLEMENTATION_PLAN.md.icloud
+.SLACK_SETUP.md.icloud
+*.icloud

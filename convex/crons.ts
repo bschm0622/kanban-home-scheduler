@@ -3,22 +3,21 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// Morning briefing - 9:00 AM EST (14:00 UTC)
-// Shows today's tasks + yesterday's unfinished items
-crons.daily(
-  "morning briefing",
-  { hourUTC: 14, minuteUTC: 0 },
-  internal.slackNotifications.sendScheduledDailyTasks,
-  {}
-);
+// Morning briefing - disabled
+// crons.daily(
+//   "morning briefing",
+//   { hourUTC: 14, minuteUTC: 0 },
+//   internal.slackNotifications.sendScheduledDailyTasks,
+//   {}
+// );
 
-// Weekly recap - Sunday 9:00 PM EST (Monday 02:00 UTC)
-crons.weekly(
-  "weekly recap",
-  { hourUTC: 2, minuteUTC: 0, dayOfWeek: "sunday" },
-  internal.slackNotifications.sendWeeklyRecap,
-  {}
-);
+// Weekly recap - disabled
+// crons.weekly(
+//   "weekly recap",
+//   { hourUTC: 2, minuteUTC: 0, dayOfWeek: "sunday" },
+//   internal.slackNotifications.sendWeeklyRecap,
+//   {}
+// );
 
 // Auto-rollover - Monday 3:00 AM EST (Monday 08:00 UTC)
 // Moves incomplete tasks from past weeks to backlog
